@@ -84,3 +84,70 @@
 | REQ-F-23 | 프로젝트 삭제  | 프로젝트 및 스터디를 삭제한다.           |
 
 ---
+
+## 데이터베이스 구조
+
+프로젝트에서 사용하는 주요 데이터는 관계형 데이터베이스(RDBMS)를 기반으로 설계하며, 개발 단계에서는 SQLite를 사용합니다.
+
+### Members
+
+| 컬럼            | 설명                           |
+| ------------- | ---------------------------- |
+| id            | 부원 고유 ID (PK)                |
+| name          | 이름                           |
+| role          | 권한 (Member / Leader / Admin) |
+| student_id    | 학번                           |
+| part          | 소속 파트                        |
+| github_link   | GitHub 주소                    |
+| profile_image | 프로필 이미지                      |
+| is_ob         | 졸업 여부                        |
+
+### Projects
+
+| 컬럼          | 설명              |
+| ----------- | --------------- |
+| id          | 프로젝트 ID (PK)    |
+| title       | 프로젝트명           |
+| description | 프로젝트 설명         |
+| tech_stack  | 사용 기술           |
+| status      | 진행 상태           |
+| category    | Project / Study |
+
+### Project_Progress
+
+| 컬럼         | 설명            |
+| ---------- | ------------- |
+| id         | 진행 기록 ID (PK) |
+| project_id | 프로젝트 ID (FK)  |
+| author_id  | 작성자 ID (FK)   |
+| content    | 진행 내용         |
+| created_at | 작성일           |
+
+### Applicants
+
+| 컬럼           | 설명          |
+| ------------ | ----------- |
+| id           | 지원자 ID (PK) |
+| name         | 이름          |
+| student_id   | 학번          |
+| part         | 지원 파트       |
+| introduction | 지원 동기       |
+| status       | 지원 상태       |
+| applied_at   | 지원일         |
+
+### Notices
+
+| 컬럼         | 설명    |
+| ---------- | ----- |
+| id         | 공지 ID |
+| title      | 제목    |
+| content    | 내용    |
+| created_at | 작성일   |
+
+### FAQs
+
+| 컬럼       | 설명     |
+| -------- | ------ |
+| id       | FAQ ID |
+| question | 질문     |
+| answer   | 답변     |
