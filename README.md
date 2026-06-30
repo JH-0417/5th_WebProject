@@ -151,3 +151,74 @@
 | id       | FAQ ID |
 | question | 질문     |
 | answer   | 답변     |
+
+---
+
+---
+
+## 핵심 API 명세
+
+Frontend와 Backend는 RESTful API를 통해 데이터를 주고받습니다.
+API는 일반 사용자 기능과 관리자 기능으로 구분하여 설계합니다.
+
+### 인증(Authentication)
+
+| Method | Endpoint | 설명 | 권한 |
+|--------|----------|------|------|
+| POST | `/api/auth/login` | 관리자 및 팀장 로그인 | Public |
+| POST | `/api/auth/logout` | 로그아웃 | Login |
+
+---
+
+### 부원(Members)
+
+| Method | Endpoint | 설명 | 권한 |
+|--------|----------|------|------|
+| GET | `/api/members` | 전체 부원 조회 | Public |
+| GET | `/api/members/{id}` | 부원 상세 조회 | Public |
+
+---
+
+### 프로젝트(Projects)
+
+| Method | Endpoint | 설명 | 권한 |
+|--------|----------|------|------|
+| GET | `/api/projects` | 프로젝트 목록 조회 | Public |
+| GET | `/api/projects/{id}` | 프로젝트 상세 조회 | Public |
+| POST | `/api/projects/{id}/progress` | 프로젝트 진행사항 등록 | Leader |
+| PATCH | `/api/projects/{id}` | 프로젝트 정보 수정 | Leader |
+
+---
+
+### 리크루팅(Applicants)
+
+| Method | Endpoint | 설명 | 권한 |
+|--------|----------|------|------|
+| POST | `/api/applicants` | 신규 지원서 제출 | Public |
+| GET | `/api/admin/applicants` | 전체 지원자 조회 | Admin |
+| PATCH | `/api/admin/applicants/{id}/approve` | 지원자 승인 | Admin |
+| DELETE | `/api/admin/applicants/{id}` | 지원자 삭제 | Admin |
+
+---
+
+### 공지사항(Notices)
+
+| Method | Endpoint | 설명 | 권한 |
+|--------|----------|------|------|
+| GET | `/api/notices` | 공지사항 조회 | Public |
+| POST | `/api/admin/notices` | 공지사항 작성 | Admin |
+| PATCH | `/api/admin/notices/{id}` | 공지사항 수정 | Admin |
+| DELETE | `/api/admin/notices/{id}` | 공지사항 삭제 | Admin |
+
+---
+
+### FAQ
+
+| Method | Endpoint | 설명 | 권한 |
+|--------|----------|------|------|
+| GET | `/api/faqs` | FAQ 조회 | Public |
+| POST | `/api/admin/faqs` | FAQ 등록 | Admin |
+| PATCH | `/api/admin/faqs/{id}` | FAQ 수정 | Admin |
+| DELETE | `/api/admin/faqs/{id}` | FAQ 삭제 | Admin |
+
+---
