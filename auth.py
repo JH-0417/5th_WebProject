@@ -25,7 +25,7 @@ def signup(payload: MemberSignupRequest, db: Session = Depends(get_db)):
     처리 순서:
     1) login_id 중복 확인
     2) student_id 중복 확인
-    3) 비밀번호 처리 (지금은 암호화 미적용, security.hash_password를 통해 추후 실제 해싱으로 교체 가능하도록 구조화)
+    3) 비밀번호 처리 (security.hash_password를 통해 bcrypt로 해싱)
     4) MemberDB로 변환해서 저장
     5) 생성된 회원 정보 반환 (비밀번호 관련 값은 응답에서 제외)
     """
@@ -52,7 +52,7 @@ def signup(payload: MemberSignupRequest, db: Session = Depends(get_db)):
 
     # 3) 비밀번호 처리
     # payload.password는 평문 그대로 들어오는데, 이 값을 MemberDB에 바로 대입하지 않고
-    # 반드시 hash_password()를 거치도록 해서 이후 실제 암호화 로직 도입 시 이 한 줄만 영향받도록 구조화함
+    # 반드시 hash_password()를 거쳐 bcrypt로 해싱한 값만 DB에 저장함
     processed_password = hash_password(payload.password)
 
     # 4) DB 모델로 변환 후 저장

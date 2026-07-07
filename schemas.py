@@ -17,8 +17,8 @@ class MemberSignupRequest(BaseModel):
     - role, is_approved, public_id 등은 서버가 자동으로 채우는 값이라 여기 포함하지 않습니다.
       (특히 role/is_approved는 클라이언트가 직접 지정할 수 있게 하면 권한 상승 공격에 노출되므로 절대 포함 금지)
     - github_username / bio / tech_stack은 가입 후 마이페이지에서 입력하는 선택 항목이라 여기 포함하지 않습니다.
-    - password는 아직 암호화하지 않은 평문 그대로 받습니다.
-      (해싱은 이 스키마가 아니라, 이후 회원가입 처리 로직(서비스 계층)에서 DB에 저장하기 직전에 수행합니다.)
+    - password는 클라이언트로부터 평문 그대로 받습니다.
+      (해싱은 이 스키마가 아니라, 회원가입 처리 로직(auth.py)에서 DB에 저장하기 직전에 security.hash_password()로 수행합니다.)
     """
 
     login_id: str = Field(
