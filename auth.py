@@ -1,8 +1,8 @@
 """
 인증(회원가입/로그인) 관련 API 라우터.
 
-Issue #3의 첫 번째 기능인 회원가입(POST /auth/signup)만 구현합니다.
-로그인, JWT, OAuth2, 권한 검사는 이후 이슈에서 다룹니다.
+Issue #3의 회원가입(POST /auth/signup), 로그인(POST /auth/login)을 구현합니다.
+JWT 발급, OAuth2, 권한 검사는 이후 이슈에서 다룹니다.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session
 
 from database import get_db
 from models import MemberDB
-from schemas import MemberSignupRequest
-from security import hash_password
+from schemas import MemberLoginRequest, MemberSignupRequest
+from security import hash_password, verify_password
 
 router = APIRouter(prefix = "/auth", tags = ["인증"])
 
@@ -97,5 +97,52 @@ def signup(payload: MemberSignupRequest, db: Session = Depends(get_db)):
             "email": new_member.email,
             "role": new_member.role,
             "is_approved": new_member.is_approved,
+        },
+    }
+
+
+@router.post("/login")
+def login(payload: MemberLoginRequest, db: Session = Depends(get_db)):
+    """
+    로그인 API.
+
+    처리 순서:
+    1) login_id로 회원 조회
+    2) verify_password()로 입력한 평문 비밀번호와 DB의 해시값 비교
+    3) 성공 시 200 OK + 사용자 정보 반환 / 실패 시 401 Unauthorized 반환
+
+    참고: JWT 발급은 이번 단계에서 다루지 않으며, 이후 이슈에서 로그인 성공 시
+    액세스 토큰을 함께 내려주는 방식으로 확장될 예정입니다.
+    """
+
+    # 1) login_id로 회원 조회
+    member = (
+        db.query(MemberDB).filter(MemberDB.login_id == payload.login_id).first()
+    )
+
+    # 2) 회원이 없거나 비밀번호가 일치하지 않는 경우
+    # 두 실패 케이스(아이디 없음 / 비밀번호 틀림)를 동일한 401 + 동일한 메시지로 처리해서
+    # "이 아이디는 존재하지 않는다" 같은 정보가 응답을 통해 유출되지 않도록 함
+    if not member or not verify_password(payload.password, member.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="아이디 또는 비밀번호가 올바르지 않습니다.",
+        )
+
+    # 3) 로그인 성공: 비밀번호(해시/평문 모두) 관련 필드는 응답에서 제외하고 반환
+    return {
+        "message": "로그인에 성공했습니다.",
+        "member": {
+            "id": member.id,
+            "public_id": member.public_id,
+            "login_id": member.login_id,
+            "name": member.name,
+            "student_id": member.student_id,
+            "department": member.department,
+            "grade": member.grade,
+            "phone_number": member.phone_number,
+            "email": member.email,
+            "role": member.role,
+            "is_approved": member.is_approved,
         },
     }
