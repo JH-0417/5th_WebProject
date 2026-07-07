@@ -1,6 +1,9 @@
 import uuid
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
-from datetime import datetime
+from typing import Optional
+
+from sqlalchemy import Enum, String, Text
+from sqlalchemy.orm import Mapped, mapped_column
+
 from database import Base
 
 
@@ -13,25 +16,23 @@ def generate_uuid():
 class MemberDB(Base):
     __tablename__ = "members"
 
-    id              = Column(Integer, primary_key=True, autoincrement=True)                     # 가입 번호
-    public_id       = Column(String, unique=True, default=generate_uuid, nullable=False)        # 공개 id(웹에서 사용)
-    login_id        = Column(String(12), unique=True, nullable=False)                           # 로그인 id
-    hashed_password = Column(String, nullable=False)                                            # pw 암호화
-    name            = Column(String, nullable=False)                                            # 이름
-    student_id      = Column(String, unique=True, nullable=False)                               # 학번
-    department      = Column(String, nullable=True)                                             # 과
-    phone           = Column(String, nullable=True)                                             # 폰 번호
-    role            = Column(String, default="member")                                          # 역할 admin, pm, member
-    is_approved     = Column(Boolean, default=False)                                            # 승인 여부
-    github          = Column(String, nullable=True)                                             # GitHub 주소
-    bio             = Column(Text, nullable=True)                                               # 소개
-    tech_stack       = Column(String, nullable=True)                                            # 아래 참조
-    """ ex)
-        언어         Python, Java, C++, JavaScript, TypeScript, Kotlin, Swift
-        프론트       React, Vue, Next.js, Flutter
-        백엔드       FastAPI, Spring, Django, Node.js, Express
-        DB          MySQL, PostgreSQL, MongoDB, SQLite
-        ML/DL       PyTorch, TensorFlow, Scikit-learn
-        도구         Git, Docker, AWS, Firebase
-        게임         Unity, Unreal Engine
-    """
+    #필수 입력
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)  # 가입 번호
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, default=generate_uuid)  # 공개 id(웹에서 사용)
+    login_id: Mapped[str] = mapped_column(String(12), unique=True)  # 로그인 id
+    hashed_password: Mapped[str] = mapped_column(String(255))  # pw 암호화
+    name: Mapped[str] = mapped_column(String(30))  # 이름
+    student_id: Mapped[str] = mapped_column(String(10), unique=True)  # 학번
+    department: Mapped[str] = mapped_column(String(50))  # 과
+    grade: Mapped[str] = mapped_column(String(10))  # 학년
+    phone_number: Mapped[str] = mapped_column(String(20), unique=True)  # 휴대폰 번호 (하이픈 없이 숫자만, "010" 포함 전체 저장)
+    role: Mapped[str] = mapped_column(Enum("admin", "pm", "member"), default="member")  # 역할 admin, pm, member
+    is_approved: Mapped[bool] = mapped_column(default=False)  # 가입 승인 여부
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)  # 이메일
+
+    #선택 입력
+    github_username: Mapped[Optional[str]] = mapped_column(String(39))  # GitHub 사용자명 # 사진도 포함?
+    bio: Mapped[Optional[str]] = mapped_column(Text)  # 소개
+    tech_stack: Mapped[Optional[str]] = mapped_column(Text)  # 사용·관심 기술
+    
+    

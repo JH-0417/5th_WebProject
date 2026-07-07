@@ -1,9 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from database import Base, engine
 
-# DB 테이블 자동 생성 (앱 시작 시 models.py 기준으로 테이블이 없으면 만들어줌)
-Base.metadata.create_all(bind=engine)
+# DB 스키마는 Alembic 마이그레이션으로 관리합니다.
+# 최초 실행 및 스키마 변경 시: `alembic upgrade head`
+# (models.py 변경 후에는 `alembic revision --autogenerate -m "설명"`으로 마이그레이션 생성)
 
 app = FastAPI(
     title="제 5세대 웹사이트 API",

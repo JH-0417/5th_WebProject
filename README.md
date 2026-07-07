@@ -27,7 +27,6 @@ Backend
 - **Routing:** React Router
 
 
-
 ### Backend
 
 - **Framework:** FastAPI
@@ -44,7 +43,6 @@ Backend
 - **Production:** 프로젝트 규모에 따라 MySQL 또는 PostgreSQL로 확장 가능
 
 ---
-
 
 
 ## 요구사항 명세
@@ -65,7 +63,6 @@ Backend
 | REQ-F-07 | 공지사항      | 공지사항을 조회한다.                    |
 | REQ-F-08 | FAQ       | FAQ를 조회한다.                     |
 | REQ-F-09 | 지원서 제출    | 모집 기간 동안 지원서를 제출한다.            |
-
 
 
 
@@ -100,7 +97,6 @@ Backend
 
 
 ---
-
 
 
 ## 데이터베이스 구조
