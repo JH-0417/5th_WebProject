@@ -10,7 +10,8 @@ python-jose를 사용해 JWT Access Token을 생성합니다.
 
 from datetime import datetime, timedelta, timezone
 
-from jose import jwt
+from fastapi import HTTPException, status
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 # ─── JWT 설정 ──────────────────────────────────────────────────────────────────
@@ -74,3 +75,29 @@ def create_access_token(login_id: str) -> str:
         "exp": expire,
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_access_token(token: str) -> str:
+    """
+    JWT Access Token을 검증하고 sub(login_id)를 반환합니다.
+
+    검증 내용:
+    - 서명(Signature) 위변조 여부 — SECRET_KEY로 재계산한 서명과 비교
+    - 만료 시각(exp) 초과 여부 — python-jose가 자동 처리
+
+    위 검증 중 하나라도 실패하면 401 Unauthorized를 발생시킵니다.
+    검증을 통과하면 Payload의 sub 값(login_id)을 반환합니다.
+    """
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="토큰이 유효하지 않거나 만료되었습니다.",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        login_id: str = payload.get("sub")
+        if login_id is None:
+            raise credentials_exception
+        return login_id
+    except JWTError:
+        raise credentials_exception
