@@ -1,13 +1,33 @@
 """
-비밀번호 처리 로직을 모아두는 모듈.
+비밀번호 처리 및 JWT 발급 로직을 모아두는 모듈.
 
-passlib(bcrypt)를 사용해 비밀번호를 해싱/검증합니다.
+passlib(bcrypt)를 사용해 비밀번호를 해싱/검증하고,
+python-jose를 사용해 JWT Access Token을 생성합니다.
 회원가입/로그인 로직은 비밀번호 값을 직접 다루지 않고 반드시 이 모듈의 함수를
 거치도록 구조화되어 있어서, 알고리즘을 교체하더라도 호출부(auth.py 등)는
 수정할 필요가 없습니다.
 """
 
+from datetime import datetime, timedelta, timezone
+
+from jose import jwt
 from passlib.context import CryptContext
+
+# ─── JWT 설정 ──────────────────────────────────────────────────────────────────
+
+# SECRET_KEY: JWT 서명(Signature) 생성·검증에 사용되는 비밀 키.
+# 이 값이 유출되면 공격자가 임의의 토큰을 위조할 수 있으므로, 실제 운영 환경에서는
+# 환경 변수(.env)로 관리하고 코드에 직접 노출하지 않아야 함.
+SECRET_KEY = "change-this-to-a-long-random-secret-in-production"
+
+# ALGORITHM: JWT 서명 알고리즘. HS256(HMAC-SHA256)은 단일 SECRET_KEY로
+# 서명과 검증을 모두 수행하는 대칭 방식이며, 가장 널리 사용됨.
+ALGORITHM = "HS256"
+
+# ACCESS_TOKEN_EXPIRE_MINUTES: Access Token 만료 시간(분).
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# ─── 비밀번호 컨텍스트 ─────────────────────────────────────────────────────────
 
 # bcrypt 스킴을 사용하는 CryptContext.
 # deprecated="auto"로 설정해두면 이후 스킴을 추가/교체할 때 예전 방식으로 저장된
@@ -29,7 +49,28 @@ def hash_password(plain_password: str) -> str:
 def verify_password(plain_password: str, stored_password: str) -> bool:
     """
     로그인 시 입력한 평문 비밀번호와 DB에 저장된 bcrypt 해시값을 비교합니다.
-
-    (로그인 API는 아직 구현하지 않으며, 이 함수는 이후 로그인 기능 구현 시 사용됩니다.)
     """
     return pwd_context.verify(plain_password, stored_password)
+
+
+def create_access_token(login_id: str) -> str:
+    """
+    JWT Access Token을 생성해서 반환합니다.
+
+    Payload 구성:
+    - sub : 토큰의 주체(Subject). 해당 회원의 login_id를 담아 이후 요청에서
+            "누구의 토큰인지"를 식별하는 데 사용됩니다.
+    - exp : 만료 시각(Expiration Time). UTC 기준 현재 시각 + 30분.
+            만료된 토큰은 python-jose가 자동으로 ExpiredSignatureError를 발생시킵니다.
+
+    서명 과정:
+    jwt.encode()가 Payload를 JSON으로 직렬화한 뒤 SECRET_KEY와 ALGORITHM(HS256)으로
+    HMAC 서명을 생성하고, Base64URL로 인코딩된 Header.Payload.Signature 형태의
+    문자열을 반환합니다.
+    """
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    payload = {
+        "sub": login_id,
+        "exp": expire,
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)

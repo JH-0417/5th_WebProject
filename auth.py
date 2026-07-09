@@ -1,8 +1,9 @@
 """
 인증(회원가입/로그인) 관련 API 라우터.
 
-Issue #3의 회원가입(POST /auth/signup), 로그인(POST /auth/login)을 구현합니다.
-JWT 발급, OAuth2, 권한 검사는 이후 이슈에서 다룹니다.
+회원가입(POST /auth/signup), 로그인(POST /auth/login)을 구현합니다.
+로그인 성공 시 JWT Access Token을 발급합니다.
+OAuth2, 권한 검사는 이후 이슈에서 다룹니다.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import MemberDB
 from schemas import MemberLoginRequest, MemberSignupRequest
-from security import hash_password, verify_password
+from security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix = "/auth", tags = ["인증"])
 
@@ -109,10 +110,7 @@ def login(payload: MemberLoginRequest, db: Session = Depends(get_db)):
     처리 순서:
     1) login_id로 회원 조회
     2) verify_password()로 입력한 평문 비밀번호와 DB의 해시값 비교
-    3) 성공 시 200 OK + 사용자 정보 반환 / 실패 시 401 Unauthorized 반환
-
-    참고: JWT 발급은 이번 단계에서 다루지 않으며, 이후 이슈에서 로그인 성공 시
-    액세스 토큰을 함께 내려주는 방식으로 확장될 예정입니다.
+    3) 성공 시 JWT Access Token 발급 후 반환 / 실패 시 401 Unauthorized 반환
     """
 
     # 1) login_id로 회원 조회
@@ -129,20 +127,9 @@ def login(payload: MemberLoginRequest, db: Session = Depends(get_db)):
             detail="아이디 또는 비밀번호가 올바르지 않습니다.",
         )
 
-    # 3) 로그인 성공: 비밀번호(해시/평문 모두) 관련 필드는 응답에서 제외하고 반환
+    # 3) 로그인 성공: JWT Access Token 생성 후 반환
+    access_token = create_access_token(login_id=member.login_id)
     return {
-        "message": "로그인에 성공했습니다.",
-        "member": {
-            "id": member.id,
-            "public_id": member.public_id,
-            "login_id": member.login_id,
-            "name": member.name,
-            "student_id": member.student_id,
-            "department": member.department,
-            "grade": member.grade,
-            "phone_number": member.phone_number,
-            "email": member.email,
-            "role": member.role,
-            "is_approved": member.is_approved,
-        },
+        "access_token": access_token,
+        "token_type": "bearer",
     }
