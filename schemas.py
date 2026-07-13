@@ -1,12 +1,15 @@
 """
-회원가입 / 로그인 요청(Request)에 사용되는 Pydantic 스키마 모음.
+회원가입 / 로그인 요청(Request) 및 회원 조회 응답(Response)에 사용되는 Pydantic 스키마 모음.
 
-- models.py의 MemberDB(DB 모델)와는 별개로, "API가 클라이언트로부터 받는 데이터의 형태"만 정의합니다.
-- 지금 단계에서는 요청(Request) 스키마만 작성하고, 응답(Response) 스키마는 아직 만들지 않습니다.
-- pydantic 2.12.5 기준: Field의 예시는 v1 방식인 example=(단수)이 아니라 examples=[...](리스트) 형태로 씁니다.
+- models.py의 MemberDB(DB 모델)와는 별개로, API의 입출력 형태만 정의합니다.
+- pydantic 2.x 기준:
+  - Field 예시는 examples=[...](리스트) 형태로 작성합니다.
+  - ORM 객체를 스키마로 변환할 때는 model_config = ConfigDict(from_attributes=True)를 사용합니다.
 """
 
-from pydantic import BaseModel, EmailStr, Field
+from typing import List, Optional
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class MemberSignupRequest(BaseModel):
@@ -91,3 +94,67 @@ class MemberLoginRequest(BaseModel):
         description="비밀번호 (평문)",
         examples=["Passw0rd!"],
     )
+
+
+# ─── 응답(Response) 스키마 ──────────────────────────────────────────────────────
+
+class MemberPublicResponse(BaseModel):
+    """
+    비로그인 공개 응답 스키마.
+
+    외부인도 볼 수 있는 정보만 포함합니다.
+    학번은 앞 4자리만 남기고 나머지를 *로 가린 masked_student_id로 대체합니다.
+    예) "20261234" → "2026*****"
+    마스킹 처리는 라우터(members.py)에서 수행 후 이 스키마로 전달합니다.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str = Field(description="공개 식별자 (UUID, URL 식별용)")
+    name: str = Field(description="이름")
+    masked_student_id: str = Field(description="마스킹된 학번 (앞 4자리 + *****)")
+    department: str = Field(description="학과")
+    grade: str = Field(description="학년")
+    email: str = Field(description="이메일 (급하게 연락 방안)")
+    role: str = Field(description="역할 (admin / pm / member)")
+    github_username: Optional[str] = Field(default=None, description="GitHub 사용자명")
+    bio: Optional[str] = Field(default=None, description="자기소개")
+    tech_stack: Optional[str] = Field(default=None, description="기술 스택")
+
+
+class MemberResponse(BaseModel):
+    """
+    로그인한 사용자용 응답 스키마.
+
+    동아리 가입이 확인된 회원에게만 노출하는 정보를 포함합니다.
+    student_id가 완전히 노출되며, is_approved 상태도 확인할 수 있습니다.
+    hashed_password / login_id / phone_number는 여기서도 제외합니다.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str = Field(description="공개 식별자 (UUID, URL 식별용)")
+    name: str = Field(description="이름")
+    student_id: str = Field(description="학번 (완전 노출)")
+    department: str = Field(description="학과")
+    grade: str = Field(description="학년")
+    email: str = Field(description="이메일")
+    role: str = Field(description="역할 (admin / pm / member)")
+    is_approved: bool = Field(description="가입 승인 여부")
+    github_username: Optional[str] = Field(default=None, description="GitHub 사용자명")
+    bio: Optional[str] = Field(default=None, description="자기소개")
+    tech_stack: Optional[str] = Field(default=None, description="기술 스택")
+
+
+class MemberPublicListResponse(BaseModel):
+    """비로그인 회원 목록 응답 스키마."""
+
+    total: int = Field(description="전체 회원 수")
+    items: List[MemberPublicResponse] = Field(description="회원 목록")
+
+
+class MemberListResponse(BaseModel):
+    """로그인한 사용자용 회원 목록 응답 스키마."""
+
+    total: int = Field(description="전체 회원 수")
+    items: List[MemberResponse] = Field(description="회원 목록")

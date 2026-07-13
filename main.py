@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from auth import router as auth_router
+from members import router as members_router
 
 # DB 스키마는 Alembic 마이그레이션으로 관리합니다.
 # 최초 실행 및 스키마 변경 시: `alembic upgrade head`
@@ -21,8 +22,8 @@ app.add_middleware(
     allow_headers=["*"],    # 헤더 허용
 )
 
-# 라우터는 기능 구현 후 단계별로 등록 예정
 app.include_router(auth_router)
+app.include_router(members_router)
 
 
 @app.get("/")
