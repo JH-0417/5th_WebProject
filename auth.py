@@ -7,41 +7,16 @@ OAuth2, 권한 검사는 이후 이슈에서 다룹니다.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_db
+from dependencies import get_current_member
 from models import MemberDB
 from schemas import MemberLoginRequest, MemberSignupRequest
-from security import create_access_token, decode_access_token, hash_password, verify_password
+from security import create_access_token, hash_password, verify_password
 
-_bearer = HTTPBearer()
-
-
-def get_current_member(
-    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
-    db: Session = Depends(get_db),
-) -> MemberDB:
-    """
-    Authorization: Bearer <token> 헤더에서 JWT를 추출하고,
-    검증 후 해당 회원의 DB 객체를 반환하는 의존성 함수.
-
-    - 헤더 자체가 없으면 HTTPBearer가 자동으로 403을 반환합니다.
-    - 토큰이 위조·만료된 경우 decode_access_token()이 401을 반환합니다.
-    - sub(login_id)에 해당하는 회원이 DB에 없으면 401을 반환합니다.
-    """
-    login_id = decode_access_token(credentials.credentials)
-    member = db.query(MemberDB).filter(MemberDB.login_id == login_id).first()
-    if member is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="토큰에 해당하는 회원을 찾을 수 없습니다.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    return member
-
-router = APIRouter(prefix = "/auth", tags = ["인증"])
+router = APIRouter(prefix="/auth", tags=["인증"])
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
