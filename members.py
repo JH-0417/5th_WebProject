@@ -4,9 +4,9 @@
 Issue #4의 전체 회원 목록 조회(GET /members),
 회원 상세 조회(GET /members/{public_id})를 구현합니다.
 
-로그인 여부에 따라 응답 스키마가 달라집니다.
-- 비로그인: MemberPublicResponse (student_id 제외)
-- 로그인:   MemberResponse (student_id 포함)
+Issue #6에서 권한별 조회 범위를 아래와 같이 분리했습니다.
+- 비로그인: MemberPublicResponse (student_id 마스킹) / 임원진(admin, pm)만 조회 가능
+- 로그인:   MemberResponse (student_id 완전 노출) / 전체 회원 조회 가능
 """
 
 from typing import Optional, Union
@@ -29,6 +29,9 @@ router = APIRouter(prefix="/members", tags=["회원"])
 
 # auto_error=False : 토큰이 없어도 403을 내지 않고 None을 반환
 _optional_bearer = HTTPBearer(auto_error=False)
+
+# 비로그인 사용자에게 공개되는 역할(임원진). 그 외 role은 비로그인에게 노출하지 않음.
+_PUBLIC_ROLES = ["admin", "pm"]
 
 
 def _to_public(member) -> dict:
@@ -78,16 +81,18 @@ def list_members(
     - role: 해당 역할(admin / pm / member)의 회원만 반환합니다.
     - 두 조건을 동시에 사용하면 AND 조건으로 필터링합니다.
     - 파라미터를 생략하면 전체 목록을 반환합니다.
-    - 로그인 여부에 따라 응답 필드가 달라집니다.
-      - 비로그인: student_id 제외
-      - 로그인:   student_id 포함
+    - 로그인 여부에 따라 조회 범위와 응답 필드가 달라집니다.
+      - 비로그인: 임원진(admin, pm)만 조회 가능, student_id는 마스킹
+        (role=member로 필터링해도 비로그인은 빈 목록을 받습니다.)
+      - 로그인:   전체 회원 조회 가능, student_id 완전 노출
     """
-    members = get_members(db, name=name, role=role)
     if _is_logged_in(credentials):
+        members = get_members(db, name=name, role=role)
         return {
             "total": len(members),
             "items": [MemberResponse.model_validate(m).model_dump() for m in members],
         }
+    members = get_members(db, name=name, role=role, roles=_PUBLIC_ROLES)
     return {
         "total": len(members),
         "items": [_to_public(m) for m in members],
@@ -105,9 +110,11 @@ def get_member(
 
     - public_id로 회원을 조회합니다.
     - 존재하지 않는 public_id이면 404 Not Found를 반환합니다.
-    - 로그인 여부에 따라 응답 필드가 달라집니다.
-      - 비로그인: student_id 제외
-      - 로그인:   student_id 포함
+    - 로그인 여부에 따라 조회 범위와 응답 필드가 달라집니다.
+      - 비로그인: 임원진(admin, pm)만 조회 가능, student_id는 마스킹
+        일반 회원(member)의 public_id로 조회하면 존재 여부를 노출하지 않기 위해
+        404 Not Found를 반환합니다. (403이 아닌 이유: 존재 자체를 숨기는 보안 원칙)
+      - 로그인:   전체 회원 조회 가능, student_id 완전 노출
     """
     member = get_member_by_public_id(db, public_id)
     if member is None:
@@ -117,4 +124,9 @@ def get_member(
         )
     if _is_logged_in(credentials):
         return MemberResponse.model_validate(member).model_dump()
+    if member.role not in _PUBLIC_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 회원을 찾을 수 없습니다.",
+        )
     return _to_public(member)

@@ -17,12 +17,16 @@ def get_members(
     db: Session,
     name: Optional[str] = None,
     role: Optional[str] = None,
+    roles: Optional[List[str]] = None,
 ) -> List[MemberDB]:
     """
     회원 목록을 반환합니다.
 
     name이 주어지면 해당 문자열을 포함하는 이름만 필터링합니다. (부분 일치)
     role이 주어지면 해당 역할(admin / pm / member)만 필터링합니다. (완전 일치)
+    roles가 주어지면 해당 역할 목록에 포함된 회원만 필터링합니다. (IN 조건)
+    - roles는 비로그인 사용자에게 임원진(admin, pm)만 노출할 때 사용합니다.
+    - role과 roles를 동시에 넘기면 두 조건이 모두 AND로 적용됩니다.
     두 조건을 동시에 사용할 수 있으며, 가입 번호(id) 오름차순으로 정렬합니다.
     """
     query = db.query(MemberDB)
@@ -30,6 +34,8 @@ def get_members(
         query = query.filter(MemberDB.name.contains(name))
     if role is not None:
         query = query.filter(MemberDB.role == role)
+    if roles is not None:
+        query = query.filter(MemberDB.role.in_(roles))
     return query.order_by(MemberDB.id).all()
 
 
