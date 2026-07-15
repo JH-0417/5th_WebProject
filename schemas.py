@@ -55,11 +55,12 @@ class MemberSignupRequest(BaseModel):
         description="학과",
         examples=["컴퓨터공학과"],
     )
-    grade: str = Field(
+    grade: int = Field(
         ...,
-        max_length=10,
-        description="학년",
-        examples=["3학년"],
+        ge=1,
+        le=4,
+        description="학년 (1~4 정수)",
+        examples=[3],
     )
     phone_number: str = Field(
         ...,
@@ -114,7 +115,7 @@ class MemberPublicResponse(BaseModel):
     name: str = Field(description="이름")
     masked_student_id: str = Field(description="마스킹된 학번 (앞 4자리 + *****)")
     department: str = Field(description="학과")
-    grade: str = Field(description="학년")
+    grade: int = Field(description="학년 (1~4)")
     email: str = Field(description="이메일 (급하게 연락 방안)")
     role: str = Field(description="역할 (admin / pm / member)")
     github_username: Optional[str] = Field(default=None, description="GitHub 사용자명")
@@ -137,13 +138,48 @@ class MemberResponse(BaseModel):
     name: str = Field(description="이름")
     student_id: str = Field(description="학번 (완전 노출)")
     department: str = Field(description="학과")
-    grade: str = Field(description="학년")
+    grade: int = Field(description="학년 (1~4)")
     email: str = Field(description="이메일")
     role: str = Field(description="역할 (admin / pm / member)")
     is_approved: bool = Field(description="가입 승인 여부")
     github_username: Optional[str] = Field(default=None, description="GitHub 사용자명")
     bio: Optional[str] = Field(default=None, description="자기소개")
     tech_stack: Optional[str] = Field(default=None, description="기술 스택")
+
+
+class MemberUpdateRequest(BaseModel):
+    """
+    관리자용 회원 부분 수정(PATCH) 요청 스키마.
+
+    unique 컬럼과 승인 여부만 수정할 수 있습니다.
+    - 포함: student_id, phone_number, email, is_approved
+    - 제외: login_id, hashed_password, public_id
+    - 제외: name, department, grade, role, github_username, bio, tech_stack
+    모든 필드는 Optional이며, 요청에 포함된 필드만 업데이트합니다.
+    """
+
+    student_id: Optional[str] = Field(
+        default=None,
+        max_length=10,
+        description="학번",
+        examples=["20231234"],
+    )
+    phone_number: Optional[str] = Field(
+        default=None,
+        pattern=r"^\d{9,11}$",
+        description="휴대폰 번호 (하이픈 없이 숫자만)",
+        examples=["01012345678"],
+    )
+    email: Optional[EmailStr] = Field(
+        default=None,
+        description="이메일 주소",
+        examples=["hong@example.com"],
+    )
+    is_approved: Optional[bool] = Field(
+        default=None,
+        description="가입 승인 여부",
+        examples=[True],
+    )
 
 
 class MemberPublicListResponse(BaseModel):

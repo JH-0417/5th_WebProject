@@ -1,7 +1,7 @@
 import uuid
 from typing import Optional
 
-from sqlalchemy import Enum, String, Text
+from sqlalchemy import Enum, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -24,7 +24,7 @@ class MemberDB(Base):
     name: Mapped[str] = mapped_column(String(30))  # 이름
     student_id: Mapped[str] = mapped_column(String(10), unique=True)  # 학번
     department: Mapped[str] = mapped_column(String(50))  # 과
-    grade: Mapped[str] = mapped_column(String(10))  # 학년
+    grade: Mapped[int] = mapped_column(Integer)  # 학년 (1~4)
     phone_number: Mapped[str] = mapped_column(String(20), unique=True)  # 휴대폰 번호 (하이픈 없이 숫자만, "010" 포함 전체 저장)
     role: Mapped[str] = mapped_column(Enum("admin", "pm", "member"), default="member")  # 역할 admin, pm, member
     is_approved: Mapped[bool] = mapped_column(default=False)  # 가입 승인 여부
