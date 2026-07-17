@@ -47,3 +47,23 @@ def get_member_by_public_id(db: Session, public_id: str) -> Optional[MemberDB]:
     (404 처리는 호출부인 라우터에서 담당합니다.)
     """
     return db.query(MemberDB).filter(MemberDB.public_id == public_id).first()
+
+
+def update_member(db: Session, public_id: str, updates: dict) -> Optional[MemberDB]:
+    """
+    public_id로 회원을 찾아 전달된 필드만 부분 수정합니다.
+
+    updates는 exclude_unset=True로 만든 dict여야 합니다.
+    회원이 없으면 None을 반환합니다.
+    (unique 충돌 시 IntegrityError는 호출부인 라우터에서 409로 변환합니다.)
+    """
+    member = get_member_by_public_id(db, public_id)
+    if member is None:
+        return None
+
+    for field, value in updates.items():
+        setattr(member, field, value)
+
+    db.commit()
+    db.refresh(member)
+    return member
