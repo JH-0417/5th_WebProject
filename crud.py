@@ -67,3 +67,35 @@ def update_member(db: Session, public_id: str, updates: dict) -> Optional[Member
     db.commit()
     db.refresh(member)
     return member
+
+
+def delete_member(db: Session, public_id: str) -> Optional[MemberDB]:
+    """
+    public_id로 회원을 찾아 삭제합니다.
+
+    회원이 없으면 None을 반환합니다.
+    (admin 삭제 금지 등 권한 정책은 호출부인 라우터에서 담당합니다.)
+    """
+    member = get_member_by_public_id(db, public_id)
+    if member is None:
+        return None
+
+    db.delete(member)
+    db.commit()
+    return member
+
+
+def update_member_password(
+    db: Session,
+    member: MemberDB,
+    hashed_password: str,
+) -> MemberDB:
+    """
+    회원의 hashed_password를 갱신합니다.
+
+    평문 비밀번호는 받지 않으며, 호출부에서 hash_password()로 해싱한 값만 전달합니다.
+    """
+    member.hashed_password = hashed_password
+    db.commit()
+    db.refresh(member)
+    return member
