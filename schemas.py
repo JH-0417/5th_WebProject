@@ -151,11 +151,12 @@ class MemberUpdateRequest(BaseModel):
     """
     관리자용 회원 부분 수정(PATCH) 요청 스키마.
 
-    unique 컬럼과 승인 여부만 수정할 수 있습니다.
-    - 포함: student_id, phone_number, email, is_approved
+    unique 컬럼, 승인 여부, 역할만 수정할 수 있습니다.
+    - 포함: student_id, phone_number, email, is_approved, role
     - 제외: login_id, hashed_password, public_id
-    - 제외: name, department, grade, role, github_username, bio, tech_stack
+    - 제외: name, department, grade, github_username, bio, tech_stack
     모든 필드는 Optional이며, 요청에 포함된 필드만 업데이트합니다.
+    role 변경은 admin 회원 삭제 전 권한 하향(member/pm)에 사용합니다.
     """
 
     student_id: Optional[str] = Field(
@@ -180,6 +181,41 @@ class MemberUpdateRequest(BaseModel):
         description="가입 승인 여부",
         examples=[True],
     )
+    role: Optional[str] = Field(
+        default=None,
+        pattern=r"^(admin|pm|member)$",
+        description="역할 (admin / pm / member). admin 삭제 전 권한 하향에 사용",
+        examples=["member"],
+    )
+
+class PasswordChangeRequest(BaseModel):
+    """
+    본인 비밀번호 변경 요청 스키마.
+
+    current_password로 본인 확인 후 new_password로 교체합니다.
+    해싱은 라우터에서 security.hash_password()로 수행합니다.
+    """
+
+    current_password: str = Field(
+        ...,
+        description="현재 비밀번호 (평문)",
+        examples=["Passw0rd!"],
+    )
+    new_password: str = Field(
+        ...,
+        min_length=8,
+        max_length=64,
+        description="새 비밀번호 (평문, 회원가입과 동일한 길이 규칙)",
+        examples=["NewPassw0rd!"],
+    )
+
+
+class PasswordResetResponse(BaseModel):
+    """관리자 비밀번호 초기화 성공 응답 스키마."""
+
+    message: str = Field(description="처리 결과 메시지")
+    temporary_password: str = Field(description="고정 임시 비밀번호 (회원에게 안내)")
+    public_id: str = Field(description="초기화된 회원의 public_id")
 
 
 class MemberPublicListResponse(BaseModel):

@@ -28,6 +28,10 @@ ALGORITHM = "HS256"
 # ACCESS_TOKEN_EXPIRE_MINUTES: Access Token 만료 시간(분).
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
+# 관리자 비밀번호 초기화(방식 A)에 사용하는 고정 임시 비밀번호.
+# 운영 환경에서는 환경 변수로 분리하는 것을 권장합니다.
+TEMPORARY_PASSWORD = "ChangeMe123!"
+
 # ─── 비밀번호 컨텍스트 ─────────────────────────────────────────────────────────
 
 # bcrypt 스킴을 사용하는 CryptContext.

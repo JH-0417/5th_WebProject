@@ -15,15 +15,18 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from crud import get_member_by_public_id, get_members
+from crud import get_member_by_public_id, get_members, update_member_password
 from database import get_db
+from dependencies import get_current_member
+from models import MemberDB
 from schemas import (
     MemberListResponse,
     MemberPublicListResponse,
     MemberPublicResponse,
     MemberResponse,
+    PasswordChangeRequest,
 )
-from security import decode_access_token
+from security import decode_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/members", tags=["회원"])
 
@@ -65,6 +68,29 @@ def _is_logged_in(credentials: Optional[HTTPAuthorizationCredentials]) -> bool:
         return True
     except HTTPException:
         return False
+
+
+@router.patch("/me/password")
+def change_my_password(
+    payload: PasswordChangeRequest,
+    current_member: MemberDB = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    """
+    본인 비밀번호 변경 API.
+
+    - get_current_member()로 로그인한 본인만 변경할 수 있습니다.
+    - current_password가 일치하지 않으면 400을 반환합니다.
+    - new_password는 BCrypt로 해싱 후 저장합니다.
+    """
+    if not verify_password(payload.current_password, current_member.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="현재 비밀번호가 올바르지 않습니다.",
+        )
+
+    update_member_password(db, current_member, hash_password(payload.new_password))
+    return {"message": "비밀번호가 변경되었습니다."}
 
 
 @router.get("", response_model=None)

@@ -11,11 +11,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from crud import get_member_by_public_id, update_member
+from crud import delete_member, get_member_by_public_id, update_member, update_member_password
 from database import get_db
 from dependencies import require_admin
 from models import MemberDB
-from schemas import MemberResponse, MemberUpdateRequest
+from schemas import MemberResponse, MemberUpdateRequest, PasswordResetResponse
+from security import TEMPORARY_PASSWORD, hash_password
 
 router = APIRouter(prefix="/admin", tags=["관리자"])
 
@@ -64,7 +65,8 @@ def patch_member(
         return MemberResponse.model_validate(member)
 
     try:
-        member = update_member(db, public_id, updates)
+        member = update_member(db, public_id, updates)      #update_member내부 commit 처리
+
     except IntegrityError:
         db.rollback()
         raise HTTPException(
@@ -79,3 +81,65 @@ def patch_member(
         )
 
     return MemberResponse.model_validate(member)
+
+
+@router.delete("/members/{public_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_member(
+    public_id: str,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 회원 삭제 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - role이 admin인 회원은 삭제할 수 없습니다. (먼저 role을 내린 뒤 삭제)
+    - 성공 시 204 No Content를 반환합니다.
+    - 회원이 없으면 404를 반환합니다.
+    """
+    member = get_member_by_public_id(db, public_id)
+    if member is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 회원을 찾을 수 없습니다.",
+        )
+    if member.role == "admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="admin 권한 회원은 삭제할 수 없습니다. role을 변경한 뒤 다시 시도하세요.",
+        )
+
+    delete_member(db, public_id)
+    return None
+
+
+@router.post(
+    "/members/{public_id}/reset-password",
+    response_model=PasswordResetResponse,
+)
+def reset_member_password(
+    public_id: str,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 비밀번호 초기화 API (방식 A: 고정 임시 비밀번호).
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - 회원이 없으면 404를 반환합니다.
+    - 임시 비밀번호는 BCrypt로 해싱해 저장하고, 평문은 응답에만 포함합니다.
+    - 이메일 발송은 이번 Issue 범위에 포함하지 않습니다.
+    """
+    member = get_member_by_public_id(db, public_id)
+    if member is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 회원을 찾을 수 없습니다.",
+        )
+
+    update_member_password(db, member, hash_password(TEMPORARY_PASSWORD))
+    return PasswordResetResponse(
+        message="비밀번호가 임시 비밀번호로 초기화되었습니다.",
+        temporary_password=TEMPORARY_PASSWORD,
+        public_id=member.public_id,
+    )
