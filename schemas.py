@@ -321,3 +321,75 @@ class ProjectListResponse(BaseModel):
 
     total: int = Field(description="전체 프로젝트 수")
     items: List[ProjectResponse] = Field(description="프로젝트 목록")
+
+
+# ─── 스터디(Study) 스키마 ──────────────────────────────────────────────────────
+# Study는 별도 테이블 없이 ProjectDB(category="study")를 재사용합니다.
+
+class StudyCreateRequest(BaseModel):
+    """
+    스터디 생성 요청 스키마.
+
+    category는 서버에서 study로 고정하므로 요청에 포함하지 않습니다.
+    """
+
+    title: str = Field(
+        ...,
+        max_length=100,
+        description="스터디명",
+        examples=["알고리즘 스터디"],
+    )
+    description: str = Field(
+        ...,
+        description="스터디 설명",
+        examples=["매주 코테 문제 풀이"],
+    )
+    tech_stack: Optional[str] = Field(
+        default=None,
+        description="사용 기술 / 주제",
+        examples=["Python, 자료구조"],
+    )
+    status: str = Field(
+        default="planned",
+        pattern=r"^(planned|in_progress|completed)$",
+        description="진행 상태 (planned / in_progress / completed)",
+        examples=["planned"],
+    )
+
+
+class StudyUpdateRequest(BaseModel):
+    """스터디 부분 수정 요청 스키마. category 변경은 허용하지 않습니다."""
+
+    title: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="스터디명",
+        examples=["알고리즘 스터디"],
+    )
+    description: Optional[str] = Field(
+        default=None,
+        description="스터디 설명",
+        examples=["매주 코테 문제 풀이"],
+    )
+    tech_stack: Optional[str] = Field(
+        default=None,
+        description="사용 기술 / 주제",
+        examples=["Python, 자료구조"],
+    )
+    status: Optional[str] = Field(
+        default=None,
+        pattern=r"^(planned|in_progress|completed)$",
+        description="진행 상태 (planned / in_progress / completed)",
+        examples=["in_progress"],
+    )
+
+
+class StudyResponse(ProjectResponse):
+    """스터디 응답 스키마. ProjectResponse와 동일 필드입니다."""
+
+
+class StudyListResponse(BaseModel):
+    """스터디 목록 응답 스키마."""
+
+    total: int = Field(description="전체 스터디 수")
+    items: List[StudyResponse] = Field(description="스터디 목록")
