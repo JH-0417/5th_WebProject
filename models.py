@@ -1,7 +1,8 @@
 import uuid
+from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import Enum, Integer, String, Text
+from sqlalchemy import DateTime, Enum, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -9,6 +10,10 @@ from database import Base
 
 def generate_uuid():
     return str(uuid.uuid4())
+
+
+def utc_now():
+    return datetime.now(timezone.utc)
 
 
 # ─── 회원 ─────────────────────────────────────────────────────────────
@@ -34,5 +39,34 @@ class MemberDB(Base):
     github_username: Mapped[Optional[str]] = mapped_column(String(39))  # GitHub 사용자명 # 사진도 포함?
     bio: Mapped[Optional[str]] = mapped_column(Text)  # 소개
     tech_stack: Mapped[Optional[str]] = mapped_column(Text)  # 사용·관심 기술
-    
-    
+
+
+# ─── 프로젝트 ───────────────────────────────────────────────────────────
+
+class ProjectDB(Base):
+    __tablename__ = "projects"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, default=generate_uuid)
+    title: Mapped[str] = mapped_column(String(100))
+    description: Mapped[str] = mapped_column(Text)
+    tech_stack: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(
+        Enum("planned", "in_progress", "completed"),
+        default="planned",
+    )
+    category: Mapped[str] = mapped_column(
+        Enum("project", "study"),
+        default="project",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+        server_default=func.now(),
+    )

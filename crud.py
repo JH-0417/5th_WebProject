@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from models import MemberDB
+from models import MemberDB, ProjectDB
 
 
 def get_members(
@@ -99,3 +99,52 @@ def update_member_password(
     db.commit()
     db.refresh(member)
     return member
+
+
+# ─── 프로젝트 CRUD ─────────────────────────────────────────────────────────────
+
+def get_projects(db: Session) -> List[ProjectDB]:
+    """프로젝트 전체 목록을 id 오름차순으로 반환합니다."""
+    return db.query(ProjectDB).order_by(ProjectDB.id).all()
+
+
+def get_project_by_public_id(db: Session, public_id: str) -> Optional[ProjectDB]:
+    """public_id로 프로젝트 단건을 조회합니다. 없으면 None."""
+    return db.query(ProjectDB).filter(ProjectDB.public_id == public_id).first()
+
+
+def create_project(db: Session, data: dict) -> ProjectDB:
+    """프로젝트를 생성하고 저장된 객체를 반환합니다."""
+    project = ProjectDB(**data)
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+def update_project(db: Session, public_id: str, updates: dict) -> Optional[ProjectDB]:
+    """
+    public_id로 프로젝트를 찾아 전달된 필드만 부분 수정합니다.
+    없으면 None을 반환합니다.
+    """
+    project = get_project_by_public_id(db, public_id)
+    if project is None:
+        return None
+
+    for field, value in updates.items():
+        setattr(project, field, value)
+
+    db.commit()
+    db.refresh(project)
+    return project
+
+
+def delete_project(db: Session, public_id: str) -> Optional[ProjectDB]:
+    """public_id로 프로젝트를 삭제합니다. 없으면 None."""
+    project = get_project_by_public_id(db, public_id)
+    if project is None:
+        return None
+
+    db.delete(project)
+    db.commit()
+    return project
