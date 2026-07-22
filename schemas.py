@@ -7,6 +7,7 @@
   - ORM 객체를 스키마로 변환할 때는 model_config = ConfigDict(from_attributes=True)를 사용합니다.
 """
 
+from datetime import datetime
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -182,7 +183,7 @@ class MemberUpdateRequest(BaseModel):
         examples=[True],
     )
     role: Optional[str] = Field(
-        default=None,
+        default=None,   #기본역할이 None뜻 아님.
         pattern=r"^(admin|pm|member)$",
         description="역할 (admin / pm / member). admin 삭제 전 권한 하향에 사용",
         examples=["member"],
@@ -230,3 +231,93 @@ class MemberListResponse(BaseModel):
 
     total: int = Field(description="전체 회원 수")
     items: List[MemberResponse] = Field(description="회원 목록")
+
+
+# ─── 프로젝트(Project) 스키마 ──────────────────────────────────────────────────
+
+class ProjectCreateRequest(BaseModel):
+    """프로젝트 생성 요청 스키마."""
+
+    title: str = Field(
+        ...,
+        max_length=100,
+        description="프로젝트명",
+        examples=["제5세대 웹사이트"],
+    )
+    description: str = Field(
+        ...,
+        description="프로젝트 설명",
+        examples=["동아리 공식 웹사이트 제작"],
+    )
+    tech_stack: Optional[str] = Field(
+        default=None,
+        description="사용 기술",
+        examples=["FastAPI, React"],
+    )
+    status: str = Field(
+        default="planned",
+        pattern=r"^(planned|in_progress|completed)$",
+        description="진행 상태 (planned / in_progress / completed)",
+        examples=["planned"],
+    )
+    category: str = Field(
+        default="project",
+        pattern=r"^(project|study)$",
+        description="분류 (project / study)",
+        examples=["project"],
+    )
+
+
+class ProjectUpdateRequest(BaseModel):
+    """프로젝트 부분 수정(PATCH) 요청 스키마. 전달된 필드만 수정합니다."""
+
+    title: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="프로젝트명",
+        examples=["제5세대 웹사이트"],
+    )
+    description: Optional[str] = Field(
+        default=None,
+        description="프로젝트 설명",
+        examples=["동아리 공식 웹사이트 제작"],
+    )
+    tech_stack: Optional[str] = Field(
+        default=None,
+        description="사용 기술",
+        examples=["FastAPI, React"],
+    )
+    status: Optional[str] = Field(
+        default=None,
+        pattern=r"^(planned|in_progress|completed)$",
+        description="진행 상태 (planned / in_progress / completed)",
+        examples=["in_progress"],
+    )
+    category: Optional[str] = Field(
+        default=None,
+        pattern=r"^(project|study)$",
+        description="분류 (project / study)",
+        examples=["study"],
+    )
+
+
+class ProjectResponse(BaseModel):
+    """프로젝트 응답 스키마. 내부 id는 노출하지 않습니다."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str = Field(description="공개 식별자 (UUID)")
+    title: str = Field(description="프로젝트명")
+    description: str = Field(description="프로젝트 설명")
+    tech_stack: Optional[str] = Field(default=None, description="사용 기술")
+    status: str = Field(description="진행 상태")
+    category: str = Field(description="분류")
+    created_at: datetime = Field(description="생성 시각")
+    updated_at: datetime = Field(description="수정 시각")
+
+
+class ProjectListResponse(BaseModel):
+    """프로젝트 목록 응답 스키마."""
+
+    total: int = Field(description="전체 프로젝트 수")
+    items: List[ProjectResponse] = Field(description="프로젝트 목록")

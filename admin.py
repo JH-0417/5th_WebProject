@@ -11,11 +11,27 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from crud import delete_member, get_member_by_public_id, update_member, update_member_password
+from crud import (
+    create_project,
+    delete_member,
+    delete_project,
+    get_member_by_public_id,
+    get_project_by_public_id,
+    update_member,
+    update_member_password,
+    update_project,
+)
 from database import get_db
 from dependencies import require_admin
 from models import MemberDB
-from schemas import MemberResponse, MemberUpdateRequest, PasswordResetResponse
+from schemas import (
+    MemberResponse,
+    MemberUpdateRequest,
+    PasswordResetResponse,
+    ProjectCreateRequest,
+    ProjectResponse,
+    ProjectUpdateRequest,
+)
 from security import TEMPORARY_PASSWORD, hash_password
 
 router = APIRouter(prefix="/admin", tags=["관리자"])
@@ -143,3 +159,81 @@ def reset_member_password(
         temporary_password=TEMPORARY_PASSWORD,
         public_id=member.public_id,
     )
+
+
+# ─── 프로젝트 관리 ─────────────────────────────────────────────────────────────
+
+@router.post(
+    "/projects",
+    response_model=ProjectResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_admin_project(
+    payload: ProjectCreateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 프로젝트 생성 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - 성공 시 201 Created + ProjectResponse를 반환합니다.
+    """
+    project = create_project(db, payload.model_dump())
+    return ProjectResponse.model_validate(project)
+
+
+@router.patch("/projects/{public_id}", response_model=ProjectResponse)
+def patch_admin_project(
+    public_id: str,
+    payload: ProjectUpdateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 프로젝트 부분 수정 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - 요청에 포함된 필드만 수정합니다. (Partial Update)
+    - 프로젝트가 없으면 404를 반환합니다.
+    """
+    updates = payload.model_dump(exclude_unset=True)
+
+    if not updates:
+        project = get_project_by_public_id(db, public_id)
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="해당 프로젝트를 찾을 수 없습니다.",
+            )
+        return ProjectResponse.model_validate(project)
+
+    project = update_project(db, public_id, updates)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 프로젝트를 찾을 수 없습니다.",
+        )
+    return ProjectResponse.model_validate(project)
+
+
+@router.delete("/projects/{public_id}")
+def remove_admin_project(
+    public_id: str,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 프로젝트 삭제 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - 성공 시 200 + message를 반환합니다.
+    - 프로젝트가 없으면 404를 반환합니다.
+    """
+    project = delete_project(db, public_id)
+    if project is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 프로젝트를 찾을 수 없습니다.",
+        )
+    return {"message": "프로젝트가 삭제되었습니다."}
