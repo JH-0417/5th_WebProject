@@ -101,50 +101,149 @@ def update_member_password(
     return member
 
 
-# ─── 프로젝트 CRUD ─────────────────────────────────────────────────────────────
+# ─── 프로젝트 / 스터디 CRUD (동일 테이블, category로 구분) ─────────────────────
+# 실제 DB 쓰기는 _*_project_row 내부 함수에만 두고,
+# create/update/delete_project|study 래퍼가 category를 고정·검증합니다.
 
 def get_projects(db: Session) -> List[ProjectDB]:
-    """프로젝트 전체 목록을 id 오름차순으로 반환합니다."""
-    return db.query(ProjectDB).order_by(ProjectDB.id).all()
+    """category=project 인 목록을 id 오름차순으로 반환합니다."""
+    return (
+        db.query(ProjectDB)
+        .filter(ProjectDB.category == "project")
+        .order_by(ProjectDB.id)
+        .all()
+    )
+
+
+def get_studies(db: Session) -> List[ProjectDB]:
+    """category=study 인 목록을 id 오름차순으로 반환합니다."""
+    return (
+        db.query(ProjectDB)
+        .filter(ProjectDB.category == "study")
+        .order_by(ProjectDB.id)
+        .all()
+    )
 
 
 def get_project_by_public_id(db: Session, public_id: str) -> Optional[ProjectDB]:
-    """public_id로 프로젝트 단건을 조회합니다. 없으면 None."""
-    return db.query(ProjectDB).filter(ProjectDB.public_id == public_id).first()
+    """public_id로 category=project 단건을 조회합니다. 없으면 None."""
+    return (
+        db.query(ProjectDB)
+        .filter(
+            ProjectDB.public_id == public_id,
+            ProjectDB.category == "project",
+        )
+        .first()
+    )
 
 
-def create_project(db: Session, data: dict) -> ProjectDB:
-    """프로젝트를 생성하고 저장된 객체를 반환합니다."""
-    project = ProjectDB(**data)
-    db.add(project)
+def get_study_by_public_id(db: Session, public_id: str) -> Optional[ProjectDB]:
+    """public_id로 category=study 단건을 조회합니다. 없으면 None."""
+    return (
+        db.query(ProjectDB)
+        .filter(
+            ProjectDB.public_id == public_id,
+            ProjectDB.category == "study",
+        )
+        .first()
+    )
+
+
+def _insert_project_row(db: Session, data: dict) -> ProjectDB:
+    """projects 테이블에 한 행을 추가합니다. category는 호출부가 넣은 값을 그대로 사용합니다."""
+    row = ProjectDB(**data)
+    db.add(row)
     db.commit()
-    db.refresh(project)
-    return project
+    db.refresh(row)
+    return row
 
 
-def update_project(db: Session, public_id: str, updates: dict) -> Optional[ProjectDB]:
-    """
-    public_id로 프로젝트를 찾아 전달된 필드만 부분 수정합니다.
-    없으면 None을 반환합니다.
-    """
-    project = get_project_by_public_id(db, public_id)
-    if project is None:
+def _update_project_row(
+    db: Session,
+    public_id: str,
+    updates: dict,
+) -> Optional[ProjectDB]:
+    """public_id로 행을 찾아 전달된 필드만 부분 수정합니다."""
+    row = db.query(ProjectDB).filter(ProjectDB.public_id == public_id).first()
+    if row is None:
         return None
 
     for field, value in updates.items():
-        setattr(project, field, value)
+        setattr(row, field, value)
 
     db.commit()
-    db.refresh(project)
-    return project
+    db.refresh(row)
+    return row
+
+
+def _delete_project_row(db: Session, public_id: str) -> Optional[ProjectDB]:
+    """public_id로 행을 삭제합니다. 없으면 None."""
+    row = db.query(ProjectDB).filter(ProjectDB.public_id == public_id).first()
+    if row is None:
+        return None
+
+    db.delete(row)
+    db.commit()
+    return row
+
+
+def create_project(db: Session, data: dict) -> ProjectDB:
+    """프로젝트를 생성합니다. category는 항상 project로 고정합니다."""
+    payload = {**data, "category": "project"}
+    return _insert_project_row(db, payload)
+
+
+def create_study(db: Session, data: dict) -> ProjectDB:
+    """스터디를 생성합니다. category는 항상 study로 고정합니다."""
+    payload = {**data, "category": "study"}
+    return _insert_project_row(db, payload)
+
+
+def update_project(
+    db: Session,
+    public_id: str,
+    updates: dict,
+) -> Optional[ProjectDB]:
+    """
+    category=project 인 행만 부분 수정합니다.
+    없거나 study이면 None을 반환합니다. category 변경은 무시합니다.
+    """
+    if get_project_by_public_id(db, public_id) is None:
+        return None
+
+    safe_updates = {k: v for k, v in updates.items() if k != "category"}
+    if not safe_updates:
+        return get_project_by_public_id(db, public_id)
+    return _update_project_row(db, public_id, safe_updates)
+
+
+def update_study(
+    db: Session,
+    public_id: str,
+    updates: dict,
+) -> Optional[ProjectDB]:
+    """
+    category=study 인 행만 부분 수정합니다.
+    없거나 project이면 None을 반환합니다. category 변경은 무시합니다.
+    """
+    if get_study_by_public_id(db, public_id) is None:
+        return None
+
+    safe_updates = {k: v for k, v in updates.items() if k != "category"}
+    if not safe_updates:
+        return get_study_by_public_id(db, public_id)
+    return _update_project_row(db, public_id, safe_updates)
 
 
 def delete_project(db: Session, public_id: str) -> Optional[ProjectDB]:
-    """public_id로 프로젝트를 삭제합니다. 없으면 None."""
-    project = get_project_by_public_id(db, public_id)
-    if project is None:
+    """category=project 인 행만 삭제합니다. 없거나 study이면 None."""
+    if get_project_by_public_id(db, public_id) is None:
         return None
+    return _delete_project_row(db, public_id)
 
-    db.delete(project)
-    db.commit()
-    return project
+
+def delete_study(db: Session, public_id: str) -> Optional[ProjectDB]:
+    """category=study 인 행만 삭제합니다. 없거나 project이면 None."""
+    if get_study_by_public_id(db, public_id) is None:
+        return None
+    return _delete_project_row(db, public_id)

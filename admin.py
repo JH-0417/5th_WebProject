@@ -13,13 +13,15 @@ from sqlalchemy.orm import Session
 
 from crud import (
     create_project,
+    create_study,
     delete_member,
     delete_project,
+    delete_study,
     get_member_by_public_id,
-    get_project_by_public_id,
     update_member,
     update_member_password,
     update_project,
+    update_study,
 )
 from database import get_db
 from dependencies import require_admin
@@ -31,6 +33,9 @@ from schemas import (
     ProjectCreateRequest,
     ProjectResponse,
     ProjectUpdateRequest,
+    StudyCreateRequest,
+    StudyResponse,
+    StudyUpdateRequest,
 )
 from security import TEMPORARY_PASSWORD, hash_password
 
@@ -177,6 +182,7 @@ def create_admin_project(
     관리자용 프로젝트 생성 API.
 
     - require_admin()으로 관리자만 접근 가능합니다.
+    - category는 create_project()에서 project로 고정합니다.
     - 성공 시 201 Created + ProjectResponse를 반환합니다.
     """
     project = create_project(db, payload.model_dump())
@@ -195,20 +201,9 @@ def patch_admin_project(
 
     - require_admin()으로 관리자만 접근 가능합니다.
     - 요청에 포함된 필드만 수정합니다. (Partial Update)
-    - 프로젝트가 없으면 404를 반환합니다.
+    - category=project 가 아니면 404를 반환합니다.
     """
-    updates = payload.model_dump(exclude_unset=True)
-
-    if not updates:
-        project = get_project_by_public_id(db, public_id)
-        if project is None:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="해당 프로젝트를 찾을 수 없습니다.",
-            )
-        return ProjectResponse.model_validate(project)
-
-    project = update_project(db, public_id, updates)
+    project = update_project(db, public_id, payload.model_dump(exclude_unset=True))
     if project is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -227,13 +222,81 @@ def remove_admin_project(
     관리자용 프로젝트 삭제 API.
 
     - require_admin()으로 관리자만 접근 가능합니다.
+    - category=project 가 아니면 404를 반환합니다.
     - 성공 시 200 + message를 반환합니다.
-    - 프로젝트가 없으면 404를 반환합니다.
     """
-    project = delete_project(db, public_id)
-    if project is None:
+    deleted = delete_project(db, public_id)
+    if deleted is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="해당 프로젝트를 찾을 수 없습니다.",
         )
     return {"message": "프로젝트가 삭제되었습니다."}
+
+
+# ─── 스터디 관리 (ProjectDB, category=study) ───────────────────────────────────
+
+@router.post(
+    "/studies",
+    response_model=StudyResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_admin_study(
+    payload: StudyCreateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 스터디 생성 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - category는 create_study()에서 study로 고정합니다.
+    - 성공 시 201 Created + StudyResponse를 반환합니다.
+    """
+    study = create_study(db, payload.model_dump())
+    return StudyResponse.model_validate(study)
+
+
+@router.patch("/studies/{public_id}", response_model=StudyResponse)
+def patch_admin_study(
+    public_id: str,
+    payload: StudyUpdateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 스터디 부분 수정 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - 요청에 포함된 필드만 수정합니다. (Partial Update)
+    - category=study 가 아니면 404를 반환합니다.
+    """
+    study = update_study(db, public_id, payload.model_dump(exclude_unset=True))
+    if study is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 스터디를 찾을 수 없습니다.",
+        )
+    return StudyResponse.model_validate(study)
+
+
+@router.delete("/studies/{public_id}")
+def remove_admin_study(
+    public_id: str,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 스터디 삭제 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - category=study 가 아니면 404를 반환합니다.
+    - 성공 시 200 + message를 반환합니다.
+    """
+    deleted = delete_study(db, public_id)
+    if deleted is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 스터디를 찾을 수 없습니다.",
+        )
+    return {"message": "스터디가 삭제되었습니다."}

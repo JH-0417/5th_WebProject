@@ -5,6 +5,7 @@ from admin import router as admin_router
 from auth import router as auth_router
 from members import router as members_router
 from projects import router as projects_router
+from studies import router as studies_router
 
 # DB 스키마는 Alembic 마이그레이션으로 관리합니다.
 # 최초 실행 및 스키마 변경 시: `alembic upgrade head`
@@ -27,6 +28,7 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(members_router)
 app.include_router(projects_router)
+app.include_router(studies_router)
 app.include_router(admin_router)
 
 
