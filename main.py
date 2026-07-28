@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from admin import router as admin_router
 from auth import router as auth_router
 from members import router as members_router
+from notices import router as notices_router
 from projects import router as projects_router
 from studies import router as studies_router
 
@@ -29,6 +30,7 @@ app.include_router(auth_router)
 app.include_router(members_router)
 app.include_router(projects_router)
 app.include_router(studies_router)
+app.include_router(notices_router)
 app.include_router(admin_router)
 
 
