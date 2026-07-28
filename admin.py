@@ -12,14 +12,17 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from crud import (
+    create_notice,
     create_project,
     create_study,
     delete_member,
+    delete_notice,
     delete_project,
     delete_study,
     get_member_by_public_id,
     update_member,
     update_member_password,
+    update_notice,
     update_project,
     update_study,
 )
@@ -29,6 +32,9 @@ from models import MemberDB
 from schemas import (
     MemberResponse,
     MemberUpdateRequest,
+    NoticeCreateRequest,
+    NoticeResponse,
+    NoticeUpdateRequest,
     PasswordResetResponse,
     ProjectCreateRequest,
     ProjectResponse,
@@ -300,3 +306,70 @@ def remove_admin_study(
             detail="해당 스터디를 찾을 수 없습니다.",
         )
     return {"message": "스터디가 삭제되었습니다."}
+
+
+# ─── 공지사항 관리 ─────────────────────────────────────────────────────────────
+
+@router.post(
+    "/notices",
+    response_model=NoticeResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_admin_notice(
+    payload: NoticeCreateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 공지사항 생성 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - is_pinned는 create_notice()에서 False로 고정합니다.
+    """
+    notice = create_notice(db, payload.model_dump())
+    return NoticeResponse.model_validate(notice)
+
+
+@router.patch("/notices/{public_id}", response_model=NoticeResponse)
+def patch_admin_notice(
+    public_id: str,
+    payload: NoticeUpdateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 공지사항 부분 수정 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - 전달된 필드만 수정합니다 (exclude_unset=True).
+    - 존재하지 않으면 404를 반환합니다.
+    """
+    notice = update_notice(db, public_id, payload.model_dump(exclude_unset=True))
+    if notice is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 공지사항을 찾을 수 없습니다.",
+        )
+    return NoticeResponse.model_validate(notice)
+
+
+@router.delete("/notices/{public_id}")
+def remove_admin_notice(
+    public_id: str,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 공지사항 삭제 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - 존재하지 않으면 404를 반환합니다.
+    - 성공 시 200 + message를 반환합니다.
+    """
+    deleted = delete_notice(db, public_id)
+    if deleted is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 공지사항을 찾을 수 없습니다.",
+        )
+    return {"message": "공지사항이 삭제되었습니다."}

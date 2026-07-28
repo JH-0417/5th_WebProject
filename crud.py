@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from models import MemberDB, ProjectDB
+from models import MemberDB, NoticeDB, ProjectDB
 
 
 def get_members(
@@ -247,3 +247,61 @@ def delete_study(db: Session, public_id: str) -> Optional[ProjectDB]:
     if get_study_by_public_id(db, public_id) is None:
         return None
     return _delete_project_row(db, public_id)
+
+
+# ─── 공지사항 CRUD ─────────────────────────────────────────────────────────────
+
+def get_notices(db: Session) -> List[NoticeDB]:
+    """공지사항 목록을 created_at 내림차순으로 반환합니다."""
+    return db.query(NoticeDB).order_by(NoticeDB.created_at.desc()).all()
+
+
+def get_notice_by_public_id(db: Session, public_id: str) -> Optional[NoticeDB]:
+    """public_id로 공지사항 단건을 조회합니다. 없으면 None."""
+    return db.query(NoticeDB).filter(NoticeDB.public_id == public_id).first()
+
+
+def create_notice(db: Session, data: dict) -> NoticeDB:
+    """공지사항을 생성합니다. is_pinned는 항상 False로 고정합니다."""
+    payload = {**data, "is_pinned": False}
+    notice = NoticeDB(**payload)
+    db.add(notice)
+    db.commit()
+    db.refresh(notice)
+    return notice
+
+
+def update_notice(
+    db: Session,
+    public_id: str,
+    updates: dict,
+) -> Optional[NoticeDB]:
+    """
+    public_id로 공지사항을 찾아 전달된 필드만 부분 수정합니다.
+    없으면 None. is_pinned 변경은 이번 Issue에서 무시합니다.
+    """
+    notice = get_notice_by_public_id(db, public_id)
+    if notice is None:
+        return None
+
+    safe_updates = {k: v for k, v in updates.items() if k != "is_pinned"}
+    if not safe_updates:
+        return notice
+
+    for field, value in safe_updates.items():
+        setattr(notice, field, value)
+
+    db.commit()
+    db.refresh(notice)
+    return notice
+
+
+def delete_notice(db: Session, public_id: str) -> Optional[NoticeDB]:
+    """public_id로 공지사항을 삭제합니다. 없으면 None."""
+    notice = get_notice_by_public_id(db, public_id)
+    if notice is None:
+        return None
+
+    db.delete(notice)
+    db.commit()
+    return notice

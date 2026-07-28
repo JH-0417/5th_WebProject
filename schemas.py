@@ -393,3 +393,57 @@ class StudyListResponse(BaseModel):
 
     total: int = Field(description="전체 스터디 수")
     items: List[StudyResponse] = Field(description="스터디 목록")
+
+
+# ─── 공지사항(Notice) 스키마 ───────────────────────────────────────────────────
+
+class NoticeCreateRequest(BaseModel):
+    """공지사항 생성 요청 스키마. is_pinned는 서버에서 False로 고정합니다."""
+
+    title: str = Field(
+        ...,
+        max_length=100,
+        description="공지 제목",
+        examples=["정기 모임 안내"],
+    )
+    content: str = Field(
+        ...,
+        description="공지 내용",
+        examples=["이번 주 금요일 저녁 7시에 정기 모임이 있습니다."],
+    )
+
+
+class NoticeUpdateRequest(BaseModel):
+    """공지사항 부분 수정(PATCH) 요청 스키마. 전달된 필드만 수정합니다."""
+
+    title: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="공지 제목",
+        examples=["정기 모임 안내 (수정)"],
+    )
+    content: Optional[str] = Field(
+        default=None,
+        description="공지 내용",
+        examples=["시간이 저녁 8시로 변경되었습니다."],
+    )
+
+
+class NoticeResponse(BaseModel):
+    """공지사항 응답 스키마. 내부 id는 노출하지 않습니다."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str = Field(description="공개 식별자 (UUID)")
+    title: str = Field(description="공지 제목")
+    content: str = Field(description="공지 내용")
+    is_pinned: bool = Field(description="상단 고정 여부 (기능은 추후 구현)")
+    created_at: datetime = Field(description="생성 시각")
+    updated_at: datetime = Field(description="수정 시각")
+
+
+class NoticeListResponse(BaseModel):
+    """공지사항 목록 응답 스키마."""
+
+    total: int = Field(description="전체 공지사항 수")
+    items: List[NoticeResponse] = Field(description="공지사항 목록")
