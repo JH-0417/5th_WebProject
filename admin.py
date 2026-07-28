@@ -7,19 +7,25 @@ require_admin 의존성을 사용하여 관리자 권한을 검사합니다.
 - role이 "admin" → 200 OK
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from crud import (
+    create_gallery,
     create_notice,
     create_project,
     create_study,
+    delete_gallery,
     delete_member,
     delete_notice,
     delete_project,
     delete_study,
+    get_gallery_by_public_id,
     get_member_by_public_id,
+    update_gallery,
     update_member,
     update_member_password,
     update_notice,
@@ -30,6 +36,9 @@ from database import get_db
 from dependencies import require_admin
 from models import MemberDB
 from schemas import (
+    GalleryCreateRequest,
+    GalleryResponse,
+    GalleryUpdateRequest,
     MemberResponse,
     MemberUpdateRequest,
     NoticeCreateRequest,
@@ -44,6 +53,7 @@ from schemas import (
     StudyUpdateRequest,
 )
 from security import TEMPORARY_PASSWORD, hash_password
+from storage import delete_gallery_image, upload_gallery_image, validate_gallery_image
 
 router = APIRouter(prefix="/admin", tags=["관리자"])
 
@@ -373,3 +383,131 @@ def remove_admin_notice(
             detail="해당 공지사항을 찾을 수 없습니다.",
         )
     return {"message": "공지사항이 삭제되었습니다."}
+
+
+# ─── 갤러리 관리 ─────────────────────────────────────────────────────────────
+
+@router.post(
+    "/gallery/upload",
+    response_model=GalleryResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_admin_gallery(
+    file: UploadFile = File(..., description="업로드할 활동 사진 (jpg/png/webp/gif, 5MB 이하)"),
+    caption: Optional[str] = Form(default=None, description="사진 설명 (선택)"),
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 갤러리 사진 업로드 API (Pattern B: Cloudinary).
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - 파일을 Cloudinary에 업로드한 뒤 반환 URL을 DB에 저장합니다.
+    - uploaded_by는 현재 로그인한 admin의 id로 서버에서 설정합니다.
+    """
+    file_bytes = await file.read()
+    validate_gallery_image(file.content_type, len(file_bytes))
+    image_url = upload_gallery_image(file_bytes)
+
+    gallery = create_gallery(
+        db,
+        {"image_url": image_url, "caption": caption},
+        uploaded_by=current_member.id,
+    )
+    return GalleryResponse.model_validate(gallery)
+
+
+@router.post(
+    "/gallery",
+    response_model=GalleryResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_admin_gallery(
+    payload: GalleryCreateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 갤러리 사진 등록 API (URL 직접 입력).
+
+    - 파일 업로드는 POST /admin/gallery/upload 를 사용하세요.
+    - uploaded_by는 현재 로그인한 admin의 id로 서버에서 설정합니다.
+    """
+    gallery = create_gallery(db, payload.model_dump(), uploaded_by=current_member.id)
+    return GalleryResponse.model_validate(gallery)
+
+
+@router.patch("/gallery/{public_id}/image", response_model=GalleryResponse)
+async def patch_admin_gallery_image(
+    public_id: str,
+    file: UploadFile = File(..., description="교체할 활동 사진"),
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 갤러리 사진 이미지 교체 API (Cloudinary).
+
+    - 기존 Cloudinary 이미지를 삭제하고 새 파일을 업로드합니다.
+    """
+    gallery = get_gallery_by_public_id(db, public_id)
+    if gallery is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 갤러리 사진을 찾을 수 없습니다.",
+        )
+
+    file_bytes = await file.read()
+    validate_gallery_image(file.content_type, len(file_bytes))
+    delete_gallery_image(gallery.image_url)
+    image_url = upload_gallery_image(file_bytes)
+
+    updated = update_gallery(db, public_id, {"image_url": image_url})
+    return GalleryResponse.model_validate(updated)
+
+
+@router.patch("/gallery/{public_id}", response_model=GalleryResponse)
+def patch_admin_gallery(
+    public_id: str,
+    payload: GalleryUpdateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 갤러리 사진 부분 수정 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - 전달된 필드만 수정합니다 (exclude_unset=True).
+    - 존재하지 않으면 404를 반환합니다.
+    """
+    gallery = update_gallery(db, public_id, payload.model_dump(exclude_unset=True))
+    if gallery is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 갤러리 사진을 찾을 수 없습니다.",
+        )
+    return GalleryResponse.model_validate(gallery)
+
+
+@router.delete("/gallery/{public_id}")
+def remove_admin_gallery(
+    public_id: str,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 갤러리 사진 삭제 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - 존재하지 않으면 404를 반환합니다.
+    - 성공 시 200 + message를 반환합니다.
+    """
+    gallery = get_gallery_by_public_id(db, public_id)
+    if gallery is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 갤러리 사진을 찾을 수 없습니다.",
+        )
+
+    delete_gallery_image(gallery.image_url)
+    delete_gallery(db, public_id)
+    return {"message": "갤러리 사진이 삭제되었습니다."}

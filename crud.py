@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from models import MemberDB, NoticeDB, ProjectDB
+from models import GalleryDB, MemberDB, NoticeDB, ProjectDB
 
 
 def get_members(
@@ -305,3 +305,58 @@ def delete_notice(db: Session, public_id: str) -> Optional[NoticeDB]:
     db.delete(notice)
     db.commit()
     return notice
+
+
+# ─── 갤러리 CRUD ─────────────────────────────────────────────────────────────
+
+def get_galleries(db: Session) -> List[GalleryDB]:
+    """갤러리 목록을 created_at 내림차순(최신순)으로 반환합니다."""
+    return db.query(GalleryDB).order_by(GalleryDB.created_at.desc()).all()
+
+
+def get_gallery_by_public_id(db: Session, public_id: str) -> Optional[GalleryDB]:
+    """public_id로 갤러리 사진 단건을 조회합니다. 없으면 None."""
+    return db.query(GalleryDB).filter(GalleryDB.public_id == public_id).first()
+
+
+def create_gallery(db: Session, data: dict, uploaded_by: int) -> GalleryDB:
+    """갤러리 사진을 생성합니다. uploaded_by는 호출부에서 현재 admin id를 전달합니다."""
+    payload = {**data, "uploaded_by": uploaded_by}
+    gallery = GalleryDB(**payload)
+    db.add(gallery)
+    db.commit()
+    db.refresh(gallery)
+    return gallery
+
+
+def update_gallery(
+    db: Session,
+    public_id: str,
+    updates: dict,
+) -> Optional[GalleryDB]:
+    """public_id로 갤러리 사진을 찾아 전달된 필드만 부분 수정합니다. 없으면 None."""
+    gallery = get_gallery_by_public_id(db, public_id)
+    if gallery is None:
+        return None
+
+    safe_updates = {k: v for k, v in updates.items() if k != "uploaded_by"}
+    if not safe_updates:
+        return gallery
+
+    for field, value in safe_updates.items():
+        setattr(gallery, field, value)
+
+    db.commit()
+    db.refresh(gallery)
+    return gallery
+
+
+def delete_gallery(db: Session, public_id: str) -> Optional[GalleryDB]:
+    """public_id로 갤러리 사진을 삭제합니다. 없으면 None."""
+    gallery = get_gallery_by_public_id(db, public_id)
+    if gallery is None:
+        return None
+
+    db.delete(gallery)
+    db.commit()
+    return gallery

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Enum, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from database import Base
@@ -82,6 +82,29 @@ class NoticeDB(Base):
     title: Mapped[str] = mapped_column(String(100))
     content: Mapped[str] = mapped_column(Text)
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+        server_default=func.now(),
+    )
+
+
+# ─── 갤러리 ───────────────────────────────────────────────────────────
+
+class GalleryDB(Base):
+    __tablename__ = "gallery"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, default=generate_uuid)
+    image_url: Mapped[str] = mapped_column(String(500))
+    caption: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    uploaded_by: Mapped[int] = mapped_column(Integer, ForeignKey("members.id"))
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,
