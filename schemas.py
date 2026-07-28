@@ -447,3 +447,58 @@ class NoticeListResponse(BaseModel):
 
     total: int = Field(description="전체 공지사항 수")
     items: List[NoticeResponse] = Field(description="공지사항 목록")
+
+
+# ─── 갤러리(Gallery) 스키마 ───────────────────────────────────────────────────
+
+class GalleryCreateRequest(BaseModel):
+    """갤러리 사진 등록 요청 스키마 (URL 직접 입력). 파일 업로드는 POST /admin/gallery/upload 사용."""
+
+    image_url: str = Field(
+        ...,
+        max_length=500,
+        description="활동 사진 URL",
+        examples=["https://example.com/images/mt-2026.jpg"],
+    )
+    caption: Optional[str] = Field(
+        default=None,
+        max_length=200,
+        description="사진 설명 (선택)",
+        examples=["2026 MT 단체 사진"],
+    )
+
+
+class GalleryUpdateRequest(BaseModel):
+    """갤러리 사진 부분 수정(PATCH) 요청 스키마. 전달된 필드만 수정합니다."""
+
+    image_url: Optional[str] = Field(
+        default=None,
+        max_length=500,
+        description="활동 사진 URL",
+        examples=["https://example.com/images/mt-2026-updated.jpg"],
+    )
+    caption: Optional[str] = Field(
+        default=None,
+        max_length=200,
+        description="사진 설명",
+        examples=["2026 MT 단체 사진 (수정)"],
+    )
+
+
+class GalleryResponse(BaseModel):
+    """갤러리 사진 응답 스키마. 내부 id는 노출하지 않습니다."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str = Field(description="공개 식별자 (UUID)")
+    image_url: str = Field(description="활동 사진 URL")
+    caption: Optional[str] = Field(default=None, description="사진 설명")
+    created_at: datetime = Field(description="등록 시각")
+    updated_at: datetime = Field(description="수정 시각")
+
+
+class GalleryListResponse(BaseModel):
+    """갤러리 사진 목록 응답 스키마."""
+
+    total: int = Field(description="전체 사진 수")
+    items: List[GalleryResponse] = Field(description="갤러리 사진 목록")
