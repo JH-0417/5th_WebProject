@@ -14,10 +14,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from crud import (
+    create_faq,
     create_gallery,
     create_notice,
     create_project,
     create_study,
+    delete_faq,
     delete_gallery,
     delete_member,
     delete_notice,
@@ -36,6 +38,8 @@ from database import get_db
 from dependencies import require_admin
 from models import MemberDB
 from schemas import (
+    FaqCreateRequest,
+    FaqResponse,
     GalleryCreateRequest,
     GalleryResponse,
     GalleryUpdateRequest,
@@ -511,3 +515,47 @@ def remove_admin_gallery(
     delete_gallery_image(gallery.image_url)
     delete_gallery(db, public_id)
     return {"message": "갤러리 사진이 삭제되었습니다."}
+
+
+# ─── FAQ 관리 ────────────────────────────────────────────────────────────────
+
+@router.post(
+    "/faqs",
+    response_model=FaqResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_admin_faq(
+    payload: FaqCreateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 FAQ 등록 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - question과 answer를 함께 등록합니다.
+    """
+    faq = create_faq(db, payload.model_dump())
+    return FaqResponse.model_validate(faq)
+
+
+@router.delete("/faqs/{public_id}")
+def remove_admin_faq(
+    public_id: str,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 FAQ 삭제 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - 존재하지 않으면 404를 반환합니다.
+    - 성공 시 200 + message를 반환합니다.
+    """
+    deleted = delete_faq(db, public_id)
+    if deleted is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 FAQ를 찾을 수 없습니다.",
+        )
+    return {"message": "FAQ가 삭제되었습니다."}
