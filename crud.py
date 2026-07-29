@@ -10,7 +10,7 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from models import GalleryDB, MemberDB, NoticeDB, ProjectDB
+from models import FaqDB, GalleryDB, MemberDB, NoticeDB, ProjectDB
 
 
 def get_members(
@@ -360,3 +360,35 @@ def delete_gallery(db: Session, public_id: str) -> Optional[GalleryDB]:
     db.delete(gallery)
     db.commit()
     return gallery
+
+
+# ─── FAQ CRUD ────────────────────────────────────────────────────────────────
+
+def get_faqs(db: Session) -> List[FaqDB]:
+    """FAQ 목록을 id 오름차순으로 반환합니다."""
+    return db.query(FaqDB).order_by(FaqDB.id.asc()).all()
+
+
+def get_faq_by_public_id(db: Session, public_id: str) -> Optional[FaqDB]:
+    """public_id로 FAQ 단건을 조회합니다. 없으면 None."""
+    return db.query(FaqDB).filter(FaqDB.public_id == public_id).first()
+
+
+def create_faq(db: Session, data: dict) -> FaqDB:
+    """FAQ를 생성합니다."""
+    faq = FaqDB(**data)
+    db.add(faq)
+    db.commit()
+    db.refresh(faq)
+    return faq
+
+
+def delete_faq(db: Session, public_id: str) -> Optional[FaqDB]:
+    """public_id로 FAQ를 삭제합니다. 없으면 None."""
+    faq = get_faq_by_public_id(db, public_id)
+    if faq is None:
+        return None
+
+    db.delete(faq)
+    db.commit()
+    return faq

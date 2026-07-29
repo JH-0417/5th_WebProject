@@ -116,3 +116,19 @@ class GalleryDB(Base):
         onupdate=utc_now,
         server_default=func.now(),
     )
+
+
+# ─── FAQ ───────────────────────────────────────────────────────────────
+
+class FaqDB(Base):
+    __tablename__ = "faqs"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, default=generate_uuid)
+    question: Mapped[str] = mapped_column(String(200))
+    answer: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        server_default=func.now(),
+    )

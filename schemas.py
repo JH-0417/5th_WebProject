@@ -502,3 +502,39 @@ class GalleryListResponse(BaseModel):
 
     total: int = Field(description="전체 사진 수")
     items: List[GalleryResponse] = Field(description="갤러리 사진 목록")
+
+
+# ─── FAQ 스키마 ───────────────────────────────────────────────────────────────
+
+class FaqCreateRequest(BaseModel):
+    """FAQ 등록 요청 스키마."""
+
+    question: str = Field(
+        ...,
+        max_length=200,
+        description="자주 묻는 질문",
+        examples=["동아리 가입은 어떻게 하나요?"],
+    )
+    answer: str = Field(
+        ...,
+        description="질문에 대한 답변",
+        examples=["모집 기간에 지원서를 제출하면 됩니다."],
+    )
+
+
+class FaqResponse(BaseModel):
+    """FAQ 응답 스키마. 내부 id는 노출하지 않습니다."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str = Field(description="공개 식별자 (UUID)")
+    question: str = Field(description="자주 묻는 질문")
+    answer: str = Field(description="질문에 대한 답변")
+    created_at: datetime = Field(description="등록 시각")
+
+
+class FaqListResponse(BaseModel):
+    """FAQ 목록 응답 스키마. 탭에서 질문·답변을 함께 보여주기 위해 answer를 포함합니다."""
+
+    total: int = Field(description="전체 FAQ 수")
+    items: List[FaqResponse] = Field(description="FAQ 목록")
