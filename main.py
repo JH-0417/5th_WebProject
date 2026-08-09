@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from admin import router as admin_router
 from auth import router as auth_router
+from calendars import router as calendar_router
 from faqs import router as faqs_router
 from gallery import router as gallery_router
 from members import router as members_router
@@ -33,6 +34,7 @@ app.include_router(members_router)
 app.include_router(projects_router)
 app.include_router(studies_router)
 app.include_router(notices_router)
+app.include_router(calendar_router)
 app.include_router(gallery_router)
 app.include_router(faqs_router)
 app.include_router(admin_router)
