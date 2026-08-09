@@ -82,6 +82,10 @@ class NoticeDB(Base):
     title: Mapped[str] = mapped_column(String(100))
     content: Mapped[str] = mapped_column(Text)
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False)
+    # 일정 공지일 때만 사용 (일반 공지는 null)
+    event_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    event_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    location: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,

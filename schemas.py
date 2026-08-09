@@ -411,6 +411,22 @@ class NoticeCreateRequest(BaseModel):
         description="공지 내용",
         examples=["이번 주 금요일 저녁 7시에 정기 모임이 있습니다."],
     )
+    event_start: Optional[datetime] = Field(
+        default=None,
+        description="행사 시작 시각 (일정 공지일 때만)",
+        examples=["2026-03-15T10:00:00+09:00"],
+    )
+    event_end: Optional[datetime] = Field(
+        default=None,
+        description="행사 종료 시각 (일정 공지일 때만)",
+        examples=["2026-03-15T18:00:00+09:00"],
+    )
+    location: Optional[str] = Field(
+        default=None,
+        max_length=200,
+        description="행사 장소 (일정 공지일 때만)",
+        examples=["학생회관 301호"],
+    )
 
 
 class NoticeUpdateRequest(BaseModel):
@@ -427,6 +443,22 @@ class NoticeUpdateRequest(BaseModel):
         description="공지 내용",
         examples=["시간이 저녁 8시로 변경되었습니다."],
     )
+    event_start: Optional[datetime] = Field(
+        default=None,
+        description="행사 시작 시각",
+        examples=["2026-03-15T10:00:00+09:00"],
+    )
+    event_end: Optional[datetime] = Field(
+        default=None,
+        description="행사 종료 시각",
+        examples=["2026-03-15T18:00:00+09:00"],
+    )
+    location: Optional[str] = Field(
+        default=None,
+        max_length=200,
+        description="행사 장소",
+        examples=["학생회관 301호"],
+    )
 
 
 class NoticeResponse(BaseModel):
@@ -438,6 +470,9 @@ class NoticeResponse(BaseModel):
     title: str = Field(description="공지 제목")
     content: str = Field(description="공지 내용")
     is_pinned: bool = Field(description="상단 고정 여부 (기능은 추후 구현)")
+    event_start: Optional[datetime] = Field(default=None, description="행사 시작 시각")
+    event_end: Optional[datetime] = Field(default=None, description="행사 종료 시각")
+    location: Optional[str] = Field(default=None, description="행사 장소")
     created_at: datetime = Field(description="생성 시각")
     updated_at: datetime = Field(description="수정 시각")
 
@@ -447,6 +482,28 @@ class NoticeListResponse(BaseModel):
 
     total: int = Field(description="전체 공지사항 수")
     items: List[NoticeResponse] = Field(description="공지사항 목록")
+
+
+# ─── 캘린더(Calendar) 스키마 ───────────────────────────────────────────────────
+
+class CalendarEventResponse(BaseModel):
+    """캘린더용 일정 응답. Notice 중 event_start가 있는 항목만 사용합니다."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str = Field(description="공지 public_id (UUID)")
+    title: str = Field(description="일정/공지 제목")
+    content: str = Field(description="공지 내용")
+    event_start: datetime = Field(description="행사 시작 시각")
+    event_end: Optional[datetime] = Field(default=None, description="행사 종료 시각")
+    location: Optional[str] = Field(default=None, description="행사 장소")
+
+
+class CalendarListResponse(BaseModel):
+    """캘린더 일정 목록 응답 스키마."""
+
+    total: int = Field(description="일정 있는 공지 수")
+    items: List[CalendarEventResponse] = Field(description="캘린더 일정 목록")
 
 
 # ─── 갤러리(Gallery) 스키마 ───────────────────────────────────────────────────

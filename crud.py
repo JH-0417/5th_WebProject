@@ -307,6 +307,20 @@ def delete_notice(db: Session, public_id: str) -> Optional[NoticeDB]:
     return notice
 
 
+def get_calendar_events(db: Session) -> List[NoticeDB]:
+    """
+    캘린더용 일정을 반환합니다.
+
+    event_start가 있는 Notice만 포함하며, event_start 오름차순(가까운 일정 순)으로 정렬합니다.
+    """
+    return (
+        db.query(NoticeDB)
+        .filter(NoticeDB.event_start.isnot(None))
+        .order_by(NoticeDB.event_start.asc())
+        .all()
+    )
+
+
 # ─── 갤러리 CRUD ─────────────────────────────────────────────────────────────
 
 def get_galleries(db: Session) -> List[GalleryDB]:
