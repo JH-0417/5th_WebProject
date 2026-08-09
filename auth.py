@@ -85,8 +85,9 @@ def signup(payload: MemberSignupRequest, db: Session = Depends(get_db)):
     db.refresh(new_member)
 
     # 5) 응답: 비밀번호(해시/평문 모두) 관련 필드는 절대 포함하지 않음
+    # is_approved는 기본 False → 관리자 승인 후 로그인 가능
     return {
-        "message": "회원가입이 완료되었습니다.",
+        "message": "회원가입이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다.",
         "member": {
             "id": new_member.id,
             "public_id": new_member.public_id,
@@ -111,7 +112,8 @@ def login(payload: MemberLoginRequest, db: Session = Depends(get_db)):
     처리 순서:
     1) login_id로 회원 조회
     2) verify_password()로 입력한 평문 비밀번호와 DB의 해시값 비교
-    3) 성공 시 JWT Access Token 발급 후 반환 / 실패 시 401 Unauthorized 반환
+    3) is_approved=False 이면 403 Forbidden (관리자 승인 전 로그인 차단)
+    4) 성공 시 JWT Access Token 발급 후 반환 / 실패 시 401 Unauthorized 반환
     """
 
     # 1) login_id로 회원 조회
@@ -128,7 +130,14 @@ def login(payload: MemberLoginRequest, db: Session = Depends(get_db)):
             detail="아이디 또는 비밀번호가 올바르지 않습니다.",
         )
 
-    # 3) 로그인 성공: JWT Access Token 생성 후 반환
+    # 3) 관리자 승인 전 회원은 로그인 불가
+    if not member.is_approved:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="관리자 승인 대기 중입니다. 승인 후 로그인할 수 있습니다.",
+        )
+
+    # 4) 로그인 성공: JWT Access Token 생성 후 반환
     access_token = create_access_token(login_id=member.login_id)
     return {
         "access_token": access_token,

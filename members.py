@@ -54,20 +54,25 @@ def _to_public(member) -> dict:
     ).model_dump()
 
 
-def _is_logged_in(credentials: Optional[HTTPAuthorizationCredentials]) -> bool:
+def _is_logged_in(
+    credentials: Optional[HTTPAuthorizationCredentials],
+    db: Session,
+) -> bool:
     """
     선택적 인증 헬퍼.
 
-    토큰이 있고 유효하면 True, 없거나 유효하지 않으면 False를 반환합니다.
-    인증 실패를 에러로 처리하지 않고 공개 응답으로 폴백합니다.
+    토큰이 유효하고, 해당 회원이 존재하며 is_approved=True 일 때만 True.
+    없거나 유효하지 않거나 미승인이면 False를 반환하고 공개 응답으로 폴백합니다.
     """
     if credentials is None:
         return False
     try:
-        decode_access_token(credentials.credentials)
-        return True
+        login_id = decode_access_token(credentials.credentials)
     except HTTPException:
         return False
+
+    member = db.query(MemberDB).filter(MemberDB.login_id == login_id).first()
+    return member is not None and bool(member.is_approved)
 
 
 @router.patch("/me/password")
@@ -112,7 +117,7 @@ def list_members(
         (role=member로 필터링해도 비로그인은 빈 목록을 받습니다.)
       - 로그인:   전체 회원 조회 가능, student_id 완전 노출
     """
-    if _is_logged_in(credentials):
+    if _is_logged_in(credentials, db):
         members = get_members(db, name=name, role=role)
         return {
             "total": len(members),
@@ -148,7 +153,7 @@ def get_member(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="해당 회원을 찾을 수 없습니다.",
         )
-    if _is_logged_in(credentials):
+    if _is_logged_in(credentials, db):
         return MemberResponse.model_validate(member).model_dump()
     if member.role not in _PUBLIC_ROLES:
         raise HTTPException(
