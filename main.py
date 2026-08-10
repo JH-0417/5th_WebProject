@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from admin import router as admin_router
 from auth import router as auth_router
 from calendars import router as calendar_router
+from exception_handlers import register_exception_handlers
 from faqs import router as faqs_router
 from gallery import router as gallery_router
 from members import router as members_router
@@ -20,6 +21,8 @@ app = FastAPI(
     description="동아리 부원 관리, 프로젝트, 공지사항, 갤러리, 캘린더, 지원서",
     version="0.1.0"
 )
+
+register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
