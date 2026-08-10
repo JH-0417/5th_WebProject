@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { login, saveAccessToken } from "../api/auth";
 
 /**
@@ -18,7 +19,6 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    // form 기본 동작(페이지 새로고침)을 막습니다.
     event.preventDefault();
     setError(null);
     setSuccess(false);
@@ -81,6 +81,11 @@ export function LoginPage() {
             {loading ? "로그인 중..." : "로그인"}
           </button>
         </form>
+
+        {/* Link: 페이지 새로고침 없이 /signup 으로 이동 (react-router) */}
+        <p className="switch-link">
+          아직 계정이 없나요? <Link to="/signup">가입 신청</Link>
+        </p>
       </section>
     </main>
   );

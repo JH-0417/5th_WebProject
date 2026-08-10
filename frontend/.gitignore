@@ -12,6 +12,8 @@ dist
 dist-ssr
 *.local
 .env
+.vite
+tsconfig.tsbuildinfo
 
 # Editor directories and files
 .vscode/*
