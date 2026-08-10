@@ -118,12 +118,14 @@ def list_members(
       - 로그인:   전체 회원 조회 가능, student_id 완전 노출
     """
     if _is_logged_in(credentials, db):
-        members = get_members(db, name=name, role=role)
+        members = get_members(db, name=name, role=role, join_status="approved")
         return {
             "total": len(members),
             "items": [MemberResponse.model_validate(m).model_dump() for m in members],
         }
-    members = get_members(db, name=name, role=role, roles=_PUBLIC_ROLES)
+    members = get_members(
+        db, name=name, role=role, roles=_PUBLIC_ROLES, join_status="approved"
+    )
     return {
         "total": len(members),
         "items": [_to_public(m) for m in members],
@@ -148,7 +150,7 @@ def get_member(
       - 로그인:   전체 회원 조회 가능, student_id 완전 노출
     """
     member = get_member_by_public_id(db, public_id)
-    if member is None:
+    if member is None or member.join_status != "approved":
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="해당 회원을 찾을 수 없습니다.",

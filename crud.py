@@ -18,6 +18,7 @@ def get_members(
     name: Optional[str] = None,
     role: Optional[str] = None,
     roles: Optional[List[str]] = None,
+    join_status: Optional[str] = None,
 ) -> List[MemberDB]:
     """
     회원 목록을 반환합니다.
@@ -27,6 +28,7 @@ def get_members(
     roles가 주어지면 해당 역할 목록에 포함된 회원만 필터링합니다. (IN 조건)
     - roles는 비로그인 사용자에게 임원진(admin, pm)만 노출할 때 사용합니다.
     - role과 roles를 동시에 넘기면 두 조건이 모두 AND로 적용됩니다.
+    join_status가 주어지면 pending / approved / rejected 로 필터링합니다.
     두 조건을 동시에 사용할 수 있으며, 가입 번호(id) 오름차순으로 정렬합니다.
     """
     query = db.query(MemberDB)
@@ -36,6 +38,8 @@ def get_members(
         query = query.filter(MemberDB.role == role)
     if roles is not None:
         query = query.filter(MemberDB.role.in_(roles))
+    if join_status is not None:
+        query = query.filter(MemberDB.join_status == join_status)
     return query.order_by(MemberDB.id).all()
 
 
@@ -54,6 +58,7 @@ def update_member(db: Session, public_id: str, updates: dict) -> Optional[Member
     public_id로 회원을 찾아 전달된 필드만 부분 수정합니다.
 
     updates는 exclude_unset=True로 만든 dict여야 합니다.
+    is_approved가 포함되면 join_status를 함께 동기화합니다.
     회원이 없으면 None을 반환합니다.
     (unique 충돌 시 IntegrityError는 호출부인 라우터에서 409로 변환합니다.)
     """
@@ -61,9 +66,35 @@ def update_member(db: Session, public_id: str, updates: dict) -> Optional[Member
     if member is None:
         return None
 
+    if "is_approved" in updates:
+        approved = bool(updates["is_approved"])
+        updates["is_approved"] = approved
+        updates["join_status"] = "approved" if approved else "pending"
+
     for field, value in updates.items():
         setattr(member, field, value)
 
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+def set_member_join_status(
+    db: Session,
+    public_id: str,
+    join_status: str,
+) -> Optional[MemberDB]:
+    """
+    회원의 가입 심사 상태(join_status)를 변경하고 is_approved를 동기화합니다.
+
+    join_status: pending / approved / rejected
+    """
+    member = get_member_by_public_id(db, public_id)
+    if member is None:
+        return None
+
+    member.join_status = join_status
+    member.is_approved = join_status == "approved"
     db.commit()
     db.refresh(member)
     return member

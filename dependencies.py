@@ -39,9 +39,12 @@ def get_current_member(
             headers={"WWW-Authenticate": "Bearer"},
         )
     if not member.is_approved:
+        detail = "관리자 승인 대기 중입니다. 승인 후 이용할 수 있습니다."
+        if getattr(member, "join_status", None) == "rejected":
+            detail = "가입 신청이 탈락 처리되었습니다."
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="관리자 승인 대기 중입니다. 승인 후 이용할 수 있습니다.",
+            detail=detail,
         )
     return member
 
