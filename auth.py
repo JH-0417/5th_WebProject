@@ -58,15 +58,20 @@ def signup(payload: MemberSignupRequest, db: Session = Depends(get_db)):
     processed_password = hash_password(payload.password)
 
     # 4) DB 모델로 변환 후 저장
+    # 가입 신청 = Member 생성. join_status=pending, is_approved=False
     new_member = MemberDB(
-        login_id = payload.login_id,
-        hashed_password = processed_password,
-        name = payload.name,
-        student_id = payload.student_id,
-        department = payload.department,
-        grade = payload.grade,
-        phone_number = payload.phone_number,
-        email = payload.email,
+        login_id=payload.login_id,
+        hashed_password=processed_password,
+        name=payload.name,
+        student_id=payload.student_id,
+        department=payload.department,
+        grade=payload.grade,
+        phone_number=payload.phone_number,
+        email=payload.email,
+        apply_reason=payload.apply_reason,
+        desired_activity=payload.desired_activity,
+        join_status="pending",
+        is_approved=False,
     )
 
     db.add(new_member)
@@ -85,9 +90,8 @@ def signup(payload: MemberSignupRequest, db: Session = Depends(get_db)):
     db.refresh(new_member)
 
     # 5) 응답: 비밀번호(해시/평문 모두) 관련 필드는 절대 포함하지 않음
-    # is_approved는 기본 False → 관리자 승인 후 로그인 가능
     return {
-        "message": "회원가입이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다.",
+        "message": "가입 신청이 완료되었습니다. 면접 및 승인 완료 후 이용 가능합니다.",
         "member": {
             "id": new_member.id,
             "public_id": new_member.public_id,
@@ -100,6 +104,9 @@ def signup(payload: MemberSignupRequest, db: Session = Depends(get_db)):
             "email": new_member.email,
             "role": new_member.role,
             "is_approved": new_member.is_approved,
+            "join_status": new_member.join_status,
+            "apply_reason": new_member.apply_reason,
+            "desired_activity": new_member.desired_activity,
         },
     }
 
@@ -130,8 +137,13 @@ def login(payload: MemberLoginRequest, db: Session = Depends(get_db)):
             detail="아이디 또는 비밀번호가 올바르지 않습니다.",
         )
 
-    # 3) 관리자 승인 전 회원은 로그인 불가
-    if not member.is_approved:
+    # 3) 관리자 승인 전 / 탈락 회원은 로그인 불가
+    if member.join_status == "rejected":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="가입 신청이 탈락 처리되었습니다.",
+        )
+    if not member.is_approved or member.join_status != "approved":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="관리자 승인 대기 중입니다. 승인 후 로그인할 수 있습니다.",
@@ -166,4 +178,7 @@ def me(current_member: MemberDB = Depends(get_current_member)):
         "email": current_member.email,
         "role": current_member.role,
         "is_approved": current_member.is_approved,
+        "join_status": current_member.join_status,
+        "apply_reason": current_member.apply_reason,
+        "desired_activity": current_member.desired_activity,
     }

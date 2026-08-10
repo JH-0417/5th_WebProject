@@ -32,8 +32,14 @@ class MemberDB(Base):
     grade: Mapped[int] = mapped_column(Integer)  # 학년 (1~4)
     phone_number: Mapped[str] = mapped_column(String(20), unique=True)  # 휴대폰 번호 (하이픈 없이 숫자만, "010" 포함 전체 저장)
     role: Mapped[str] = mapped_column(Enum("admin", "pm", "member"), default="member")  # 역할 admin, pm, member
-    is_approved: Mapped[bool] = mapped_column(default=False)  # 가입 승인 여부
+    is_approved: Mapped[bool] = mapped_column(default=False)  # 가입 승인 여부 (join_status=approved 와 동기화)
+    join_status: Mapped[str] = mapped_column(
+        Enum("pending", "approved", "rejected"),
+        default="pending",
+    )  # 가입 심사 상태: 대기 / 승인 / 탈락
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)  # 이메일
+    apply_reason: Mapped[str] = mapped_column(Text, default="")  # 지원 사유
+    desired_activity: Mapped[str] = mapped_column(Text, default="")  # 동아리에서 해보고 싶은 활동
 
     #선택 입력
     github_username: Mapped[Optional[str]] = mapped_column(String(39))  # GitHub 사용자명 # 사진도 포함?

@@ -74,6 +74,20 @@ class MemberSignupRequest(BaseModel):
         description="이메일 주소",
         examples=["hong@example.com"],
     )
+    apply_reason: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="지원 사유",
+        examples=["웹 개발을 배우고 팀 프로젝트 경험을 쌓고 싶어서 지원합니다."],
+    )
+    desired_activity: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="동아리 들어와서 해보고 싶은 활동",
+        examples=["동아리 웹사이트 제작과 스터디 운영에 참여하고 싶습니다."],
+    )
 
 
 class MemberLoginRequest(BaseModel):
@@ -129,7 +143,7 @@ class MemberResponse(BaseModel):
     로그인한 사용자용 응답 스키마.
 
     동아리 가입이 확인된 회원에게만 노출하는 정보를 포함합니다.
-    student_id가 완전히 노출되며, is_approved 상태도 확인할 수 있습니다.
+    student_id가 완전히 노출되며, 가입 심사 상태도 확인할 수 있습니다.
     hashed_password / login_id / phone_number는 여기서도 제외합니다.
     """
 
@@ -143,9 +157,35 @@ class MemberResponse(BaseModel):
     email: str = Field(description="이메일")
     role: str = Field(description="역할 (admin / pm / member)")
     is_approved: bool = Field(description="가입 승인 여부")
+    join_status: str = Field(description="가입 심사 상태 (pending / approved / rejected)")
     github_username: Optional[str] = Field(default=None, description="GitHub 사용자명")
     bio: Optional[str] = Field(default=None, description="자기소개")
     tech_stack: Optional[str] = Field(default=None, description="기술 스택")
+
+
+class MemberAdminResponse(MemberResponse):
+    """
+    관리자용 회원 응답 스키마.
+
+    가입 심사에 필요한 지원 문항(지원 사유, 희망 활동)을 포함합니다.
+    """
+
+    apply_reason: str = Field(description="지원 사유")
+    desired_activity: str = Field(description="동아리 들어와서 해보고 싶은 활동")
+
+
+class MemberAdminListResponse(BaseModel):
+    """관리자용 회원 목록 응답 스키마."""
+
+    total: int = Field(description="전체 건수")
+    items: List[MemberAdminResponse] = Field(description="회원 목록")
+
+
+class MemberJoinActionResponse(BaseModel):
+    """가입 승인/탈락 처리 결과 응답 스키마."""
+
+    message: str = Field(description="처리 결과 메시지")
+    member: MemberAdminResponse = Field(description="처리된 회원 정보")
 
 
 class MemberUpdateRequest(BaseModel):
@@ -158,6 +198,8 @@ class MemberUpdateRequest(BaseModel):
     - 제외: name, department, grade, github_username, bio, tech_stack
     모든 필드는 Optional이며, 요청에 포함된 필드만 업데이트합니다.
     role 변경은 admin 회원 삭제 전 권한 하향(member/pm)에 사용합니다.
+    is_approved 변경 시 join_status도 함께 동기화됩니다.
+    승인/탈락은 전용 API(/approve, /reject) 사용을 권장합니다.
     """
 
     student_id: Optional[str] = Field(
@@ -179,7 +221,7 @@ class MemberUpdateRequest(BaseModel):
     )
     is_approved: Optional[bool] = Field(
         default=None,
-        description="가입 승인 여부",
+        description="가입 승인 여부 (True면 join_status=approved, False면 pending)",
         examples=[True],
     )
     role: Optional[str] = Field(

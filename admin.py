@@ -9,7 +9,7 @@ require_admin 의존성을 사용하여 관리자 권한을 검사합니다.
 
 from typing import Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -27,6 +27,8 @@ from crud import (
     delete_study,
     get_gallery_by_public_id,
     get_member_by_public_id,
+    get_members,
+    set_member_join_status,
     update_gallery,
     update_member,
     update_member_password,
@@ -43,6 +45,9 @@ from schemas import (
     GalleryCreateRequest,
     GalleryResponse,
     GalleryUpdateRequest,
+    MemberAdminListResponse,
+    MemberAdminResponse,
+    MemberJoinActionResponse,
     MemberResponse,
     MemberUpdateRequest,
     NoticeCreateRequest,
@@ -76,6 +81,81 @@ def admin_test(current_member: MemberDB = Depends(require_admin)):
         "message": "관리자 인증 성공",
         "admin": current_member.name,
         "role": current_member.role,
+    }
+
+
+@router.get("/members", response_model=MemberAdminListResponse)
+def list_admin_members(
+    join_status: Optional[str] = Query(
+        default=None,
+        description="가입 심사 상태 필터 (pending / approved / rejected)",
+    ),
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 회원(가입 신청) 목록 조회 API.
+
+    - join_status: pending / approved / rejected 필터 (예: 대기 목록만 보기)
+    - 지원 사유·희망 활동 필드를 포함합니다.
+    """
+    if join_status is not None and join_status not in ("pending", "approved", "rejected"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="join_status는 pending, approved, rejected 중 하나여야 합니다.",
+        )
+
+    members = get_members(db, join_status=join_status)
+    return {
+        "total": len(members),
+        "items": [MemberAdminResponse.model_validate(m) for m in members],
+    }
+
+
+@router.patch("/members/{public_id}/approve", response_model=MemberJoinActionResponse)
+def approve_member(
+    public_id: str,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    가입 신청 승인 API.
+
+    join_status=approved, is_approved=True 로 변경합니다.
+    """
+    member = set_member_join_status(db, public_id, "approved")
+    if member is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 회원을 찾을 수 없습니다.",
+        )
+    return {
+        "message": "가입이 승인되었습니다.",
+        "member": MemberAdminResponse.model_validate(member),
+    }
+
+
+@router.patch("/members/{public_id}/reject", response_model=MemberJoinActionResponse)
+def reject_member(
+    public_id: str,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    가입 신청 탈락 API.
+
+    join_status=rejected, is_approved=False 로 변경합니다.
+    계정은 삭제하지 않고 유지합니다 (로그인 불가).
+    """
+    member = set_member_join_status(db, public_id, "rejected")
+    if member is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 회원을 찾을 수 없습니다.",
+        )
+    return {
+        "message": "가입 신청이 탈락 처리되었습니다.",
+        "member": MemberAdminResponse.model_validate(member),
     }
 
 
