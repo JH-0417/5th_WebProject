@@ -26,7 +26,14 @@ register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:8000", "http://localhost:8000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+    ],
     allow_credentials = True, # 로그인 기능
     allow_methods=["*"],    # GET,POST 등 허용
     allow_headers=["*"],    # 헤더 허용
