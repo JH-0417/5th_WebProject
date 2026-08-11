@@ -117,6 +117,9 @@ export function HomePage() {
         ) : null}
 
         <div className="button-row">
+          <Link to="/notices" className="btn-primary-link">
+            공지사항
+          </Link>
           {me?.role === "admin" ? (
             <Link to="/admin/members" className="btn-primary-link">
               가입 신청 관리

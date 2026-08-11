@@ -294,3 +294,67 @@ button[type="submit"]:disabled {
 .btn-reject {
   background: #b91c1c;
 }
+
+.notice-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.notice-list-item {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.notice-list-item:hover {
+  border-color: #93c5fd;
+  background: #f8fafc;
+}
+
+.notice-list-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.notice-list-item time,
+.notice-detail-header time,
+.notice-event-preview {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.notice-detail-header {
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.notice-detail-header h1 {
+  margin: 0;
+}
+
+.event-box {
+  margin: 20px 0;
+  padding: 16px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e3a8a;
+}
+
+.event-box p {
+  margin: 8px 0 0;
+}
+
+.notice-content {
+  margin-top: 24px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.75;
+}
