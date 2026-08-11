@@ -4,6 +4,8 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminMembersPage } from "./pages/AdminMembersPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
+import { NoticeDetailPage } from "./pages/NoticeDetailPage";
+import { NoticesPage } from "./pages/NoticesPage";
 import { ProfileEditPage } from "./pages/ProfileEditPage";
 import { SignupPage } from "./pages/SignupPage";
 
@@ -14,6 +16,7 @@ import { SignupPage } from "./pages/SignupPage";
  *   /               → HomePage (로그인 필요)
  *   /me/edit        → ProfileEditPage (로그인 필요)
  *   /admin/members  → AdminMembersPage (admin 필요)
+ *   /notices        → 공지사항 목록·상세 (공개)
  *   /login, /signup → 인증 페이지
  */
 function App() {
@@ -46,6 +49,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/notices" element={<NoticesPage />} />
+        <Route path="/notices/:publicId" element={<NoticeDetailPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
