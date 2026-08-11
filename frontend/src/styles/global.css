@@ -33,6 +33,10 @@ body {
   border: 1px solid #e5e7eb;
 }
 
+.card-wide {
+  width: min(100%, 560px);
+}
+
 .card h1 {
   margin: 0 0 8px;
   font-size: 1.6rem;
@@ -54,20 +58,24 @@ body {
   font-size: 0.95rem;
 }
 
-.field input {
+.field input,
+.field textarea {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font: inherit;
+  resize: vertical;
 }
 
-.field input:focus {
+.field input:focus,
+.field textarea:focus {
   outline: 2px solid #93c5fd;
   border-color: #60a5fa;
 }
 
-button[type="submit"] {
+button[type="submit"],
+.result-box button {
   margin-top: 4px;
   padding: 12px 14px;
   border: 0;
@@ -94,4 +102,26 @@ button[type="submit"]:disabled {
   margin: 0;
   color: #047857;
   font-size: 0.9rem;
+}
+
+.switch-link {
+  margin: 20px 0 0;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.switch-link a {
+  color: #1d4ed8;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.switch-link a:hover {
+  text-decoration: underline;
+}
+
+.result-box {
+  display: grid;
+  gap: 16px;
 }
