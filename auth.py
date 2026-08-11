@@ -181,4 +181,7 @@ def me(current_member: MemberDB = Depends(get_current_member)):
         "join_status": current_member.join_status,
         "apply_reason": current_member.apply_reason,
         "desired_activity": current_member.desired_activity,
+        "github_username": current_member.github_username,
+        "bio": current_member.bio,
+        "tech_stack": current_member.tech_stack,
     }

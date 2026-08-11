@@ -231,6 +231,60 @@ class MemberUpdateRequest(BaseModel):
         examples=["member"],
     )
 
+class MemberSelfUpdateRequest(BaseModel):
+    """
+    본인 프로필 부분 수정(PATCH /members/me) 요청 스키마.
+
+    로그인한 회원만 자신의 정보를 수정합니다.
+    - 포함: department, grade, phone_number, email, github_username, bio, tech_stack
+    - 제외: login_id, student_id, name, role, is_approved, join_status, public_id, password
+    모든 필드는 Optional이며, 요청에 포함된 필드만 업데이트합니다.
+    """
+
+    department: Optional[str] = Field(
+        default=None,
+        max_length=50,
+        description="학과",
+        examples=["컴퓨터공학과"],
+    )
+    grade: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=4,
+        description="학년 (1~4)",
+        examples=[3],
+    )
+    phone_number: Optional[str] = Field(
+        default=None,
+        pattern=r"^\d{9,11}$",
+        description="휴대폰 번호 (하이픈 없이 숫자만)",
+        examples=["01012345678"],
+    )
+    email: Optional[EmailStr] = Field(
+        default=None,
+        description="이메일 주소",
+        examples=["hong@example.com"],
+    )
+    github_username: Optional[str] = Field(
+        default=None,
+        max_length=39,
+        description="GitHub 사용자명",
+        examples=["hong-dev"],
+    )
+    bio: Optional[str] = Field(
+        default=None,
+        max_length=2000,
+        description="자기소개",
+        examples=["웹 개발에 관심이 많습니다."],
+    )
+    tech_stack: Optional[str] = Field(
+        default=None,
+        max_length=2000,
+        description="사용·관심 기술",
+        examples=["Python, React, FastAPI"],
+    )
+
+
 class PasswordChangeRequest(BaseModel):
     """
     본인 비밀번호 변경 요청 스키마.

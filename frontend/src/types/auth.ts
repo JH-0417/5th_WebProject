@@ -63,6 +63,26 @@ export type MeResponse = {
   role: string;
   is_approved: boolean;
   join_status: string;
+  github_username?: string | null;
+  bio?: string | null;
+  tech_stack?: string | null;
+};
+
+/** PATCH /members/me 요청 (보낸 필드만 수정) */
+export type ProfileUpdateRequest = {
+  department?: string;
+  grade?: number;
+  phone_number?: string;
+  email?: string;
+  github_username?: string | null;
+  bio?: string | null;
+  tech_stack?: string | null;
+};
+
+/** PATCH /members/me/password 요청 */
+export type PasswordChangeRequest = {
+  current_password: string;
+  new_password: string;
 };
 
 /**
