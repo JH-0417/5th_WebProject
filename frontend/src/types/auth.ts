@@ -48,6 +48,24 @@ export type SignupResponse = {
 };
 
 /**
+ * GET /auth/me 성공 응답
+ * Authorization: Bearer <token> 이 있어야 호출 가능
+ */
+export type MeResponse = {
+  public_id: string;
+  login_id: string;
+  name: string;
+  student_id: string;
+  department: string;
+  grade: number;
+  phone_number: string;
+  email: string;
+  role: string;
+  is_approved: boolean;
+  join_status: string;
+};
+
+/**
  * 백엔드 에러 JSON 형태
  * - 일반: { "detail": "메시지" }
  * - 검증 실패(422): { "detail": "...", "errors": [ ... ] }

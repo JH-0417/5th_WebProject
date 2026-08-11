@@ -2,6 +2,7 @@ import { apiRequest } from "./client";
 import type {
   LoginRequest,
   LoginResponse,
+  MeResponse,
   SignupRequest,
   SignupResponse,
 } from "../types/auth";
@@ -9,7 +10,7 @@ import type {
 /**
  * 인증 관련 API 모음
  *
- * 화면(LoginPage / SignupPage)은 fetch 를 직접 쓰지 않고
+ * 화면(LoginPage / SignupPage / HomePage)은 fetch 를 직접 쓰지 않고
  * 여기 함수만 호출합니다. (역할 분리)
  */
 
@@ -49,4 +50,23 @@ export function getAccessToken(): string | null {
 /** 로그아웃 시 토큰 삭제 */
 export function clearAccessToken(): void {
   localStorage.removeItem(TOKEN_KEY);
+}
+
+/**
+ * GET /auth/me — 로그인한 내 정보
+ * 헤더에 Authorization: Bearer <token> 을 붙여 보냅니다.
+ */
+export function fetchMe(): Promise<MeResponse> {
+  const token = getAccessToken();
+  if (!token) {
+    // 토큰이 없으면 서버까지 가지 않고 바로 실패
+    return Promise.reject(new Error("로그인이 필요합니다."));
+  }
+
+  return apiRequest<MeResponse>("/auth/me", {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
 }
