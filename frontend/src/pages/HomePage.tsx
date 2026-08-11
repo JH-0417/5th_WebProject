@@ -117,6 +117,11 @@ export function HomePage() {
         ) : null}
 
         <div className="button-row">
+          {me?.role === "admin" ? (
+            <Link to="/admin/members" className="btn-primary-link">
+              가입 신청 관리
+            </Link>
+          ) : null}
           <Link to="/me/edit" className="btn-primary-link">
             내 정보 수정
           </Link>
