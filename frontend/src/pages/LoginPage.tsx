@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { login, saveAccessToken } from "../api/auth";
 
 /**
@@ -8,20 +8,19 @@ import { login, saveAccessToken } from "../api/auth";
  * 흐름:
  * 1) 사용자가 아이디/비밀번호 입력
  * 2) POST /auth/login 호출
- * 3) 성공하면 access_token 을 localStorage 에 저장
+ * 3) 성공하면 access_token 을 localStorage 에 저장 후 홈(/)으로 이동
  * 4) 실패하면 서버가 준 메시지를 화면에 표시
  */
 export function LoginPage() {
+  const navigate = useNavigate();
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
-    setSuccess(false);
     setLoading(true);
 
     try {
@@ -30,7 +29,8 @@ export function LoginPage() {
         password,
       });
       saveAccessToken(result.access_token);
-      setSuccess(true);
+      // 로그인 성공 → 홈으로 이동
+      navigate("/", { replace: true });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "로그인에 실패했습니다.";
@@ -73,16 +73,12 @@ export function LoginPage() {
           </label>
 
           {error ? <p className="error">{error}</p> : null}
-          {success ? (
-            <p className="success">로그인 성공! 토큰이 저장되었습니다.</p>
-          ) : null}
 
           <button type="submit" disabled={loading}>
             {loading ? "로그인 중..." : "로그인"}
           </button>
         </form>
 
-        {/* Link: 페이지 새로고침 없이 /signup 으로 이동 (react-router) */}
         <p className="switch-link">
           아직 계정이 없나요? <Link to="/signup">가입 신청</Link>
         </p>

@@ -125,3 +125,49 @@ button[type="submit"]:disabled {
   display: grid;
   gap: 16px;
 }
+
+.muted {
+  margin: 0 0 16px;
+  color: #6b7280;
+}
+
+.info-list {
+  margin: 0 0 24px;
+  display: grid;
+  gap: 12px;
+}
+
+.info-list > div {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.info-list dt {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.info-list dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.btn-secondary {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #1f2937;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  background: #f9fafb;
+}
