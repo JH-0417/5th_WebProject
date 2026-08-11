@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { clearAccessToken, fetchMe } from "../api/auth";
 import type { MeResponse } from "../types/auth";
 
@@ -31,7 +31,6 @@ export function HomePage() {
         }
       } catch (err) {
         if (cancelled) return;
-        // 토큰이 유효하지 않으면 지우고 로그인으로
         clearAccessToken();
         const message =
           err instanceof Error ? err.message : "내 정보를 불러오지 못했습니다.";
@@ -87,8 +86,24 @@ export function HomePage() {
               <dd>{me.grade}</dd>
             </div>
             <div>
+              <dt>휴대폰</dt>
+              <dd>{me.phone_number}</dd>
+            </div>
+            <div>
               <dt>이메일</dt>
               <dd>{me.email}</dd>
+            </div>
+            <div>
+              <dt>GitHub</dt>
+              <dd>{me.github_username || "-"}</dd>
+            </div>
+            <div>
+              <dt>자기소개</dt>
+              <dd>{me.bio || "-"}</dd>
+            </div>
+            <div>
+              <dt>기술 스택</dt>
+              <dd>{me.tech_stack || "-"}</dd>
             </div>
             <div>
               <dt>역할</dt>
@@ -101,9 +116,14 @@ export function HomePage() {
           </dl>
         ) : null}
 
-        <button type="button" className="btn-secondary" onClick={handleLogout}>
-          로그아웃
-        </button>
+        <div className="button-row">
+          <Link to="/me/edit" className="btn-primary-link">
+            내 정보 수정
+          </Link>
+          <button type="button" className="btn-secondary" onClick={handleLogout}>
+            로그아웃
+          </button>
+        </div>
       </section>
     </main>
   );

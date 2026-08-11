@@ -171,3 +171,34 @@ button[type="submit"]:disabled {
 .btn-secondary:hover {
   background: #f9fafb;
 }
+
+.button-row {
+  display: grid;
+  gap: 10px;
+}
+
+.btn-primary-link {
+  display: block;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #1d4ed8;
+  color: #fff;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.btn-primary-link:hover {
+  background: #1e40af;
+}
+
+.section-title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.divider {
+  margin: 28px 0;
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+}

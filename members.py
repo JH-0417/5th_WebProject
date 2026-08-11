@@ -15,7 +15,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from crud import get_member_by_public_id, get_members, update_member_password
+from sqlalchemy.exc import IntegrityError
+
+from crud import get_member_by_public_id, get_members, update_member, update_member_password
 from database import get_db
 from dependencies import get_current_member
 from models import MemberDB
@@ -24,6 +26,7 @@ from schemas import (
     MemberPublicListResponse,
     MemberPublicResponse,
     MemberResponse,
+    MemberSelfUpdateRequest,
     PasswordChangeRequest,
 )
 from security import decode_access_token, hash_password, verify_password
@@ -73,6 +76,61 @@ def _is_logged_in(
 
     member = db.query(MemberDB).filter(MemberDB.login_id == login_id).first()
     return member is not None and bool(member.is_approved)
+
+
+@router.patch("/me")
+def update_my_profile(
+    payload: MemberSelfUpdateRequest,
+    current_member: MemberDB = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    """
+    본인 프로필 부분 수정 API.
+
+    - get_current_member()로 로그인한 본인만 수정할 수 있습니다.
+    - 요청에 포함된 필드만 업데이트합니다.
+    - phone_number / email unique 충돌 시 409를 반환합니다.
+    """
+    updates = payload.model_dump(exclude_unset=True)
+    if not updates:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="수정할 항목이 없습니다.",
+        )
+
+    try:
+        member = update_member(db, current_member.public_id, updates)
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="이미 등록된 전화번호 또는 이메일입니다.",
+        )
+
+    if member is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="회원을 찾을 수 없습니다.",
+        )
+
+    # /auth/me 와 같은 형태로 반환 (프론트 MeResponse 와 맞춤)
+    return {
+        "id": member.id,
+        "public_id": member.public_id,
+        "login_id": member.login_id,
+        "name": member.name,
+        "student_id": member.student_id,
+        "department": member.department,
+        "grade": member.grade,
+        "phone_number": member.phone_number,
+        "email": member.email,
+        "role": member.role,
+        "is_approved": member.is_approved,
+        "join_status": member.join_status,
+        "github_username": member.github_username,
+        "bio": member.bio,
+        "tech_stack": member.tech_stack,
+    }
 
 
 @router.patch("/me/password")
