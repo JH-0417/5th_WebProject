@@ -16,3 +16,11 @@ export type ActivityListResponse = {
 };
 
 export type ActivityKind = "projects" | "studies";
+
+/** 관리자 프로젝트·스터디 작성/수정 요청 */
+export type ActivityManageRequest = {
+  title: string;
+  description: string;
+  tech_stack: string | null;
+  status: Activity["status"];
+};

@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AdminRoute } from "./components/AdminRoute";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AdminActivitiesPage } from "./pages/AdminActivitiesPage";
+import { AdminActivityFormPage } from "./pages/AdminActivityFormPage";
 import { AdminMembersPage } from "./pages/AdminMembersPage";
 import { AdminNoticeFormPage } from "./pages/AdminNoticeFormPage";
 import { AdminNoticesPage } from "./pages/AdminNoticesPage";
@@ -21,6 +23,8 @@ import { SignupPage } from "./pages/SignupPage";
  *   /me/edit        → ProfileEditPage (로그인 필요)
  *   /admin/members  → AdminMembersPage (admin 필요)
  *   /admin/notices  → 관리자 공지 작성·수정·삭제
+ *   /admin/projects → 관리자 프로젝트 작성·수정·삭제
+ *   /admin/studies  → 관리자 스터디 작성·수정·삭제
  *   /notices        → 공지사항 목록·상세 (공개)
  *   /projects       → 프로젝트 목록·상세 (공개)
  *   /studies        → 스터디 목록·상세 (공개)
@@ -82,6 +86,66 @@ function App() {
             <ProtectedRoute>
               <AdminRoute>
                 <AdminNoticeFormPage />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/projects"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminActivitiesPage kind="projects" />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/projects/new"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminActivityFormPage kind="projects" />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/projects/:publicId/edit"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminActivityFormPage kind="projects" />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/studies"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminActivitiesPage kind="studies" />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/studies/new"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminActivityFormPage kind="studies" />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/studies/:publicId/edit"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminActivityFormPage kind="studies" />
               </AdminRoute>
             </ProtectedRoute>
           }

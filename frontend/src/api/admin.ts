@@ -10,6 +10,11 @@ import type {
   NoticeCreateRequest,
   NoticeUpdateRequest,
 } from "../types/notices";
+import type {
+  Activity,
+  ActivityKind,
+  ActivityManageRequest,
+} from "../types/activities";
 
 /**
  * 관리자 API 모음
@@ -94,6 +99,48 @@ export function updateNotice(
 export function deleteNotice(publicId: string): Promise<{ message: string }> {
   return apiRequest<{ message: string }>(
     `/admin/notices/${encodeURIComponent(publicId)}`,
+    {
+      method: "DELETE",
+      headers: authHeaders(),
+    },
+  );
+}
+
+/** POST /admin/projects 또는 /admin/studies */
+export function createActivity(
+  kind: ActivityKind,
+  payload: ActivityManageRequest,
+): Promise<Activity> {
+  return apiRequest<Activity>(`/admin/${kind}`, {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+}
+
+/** PATCH /admin/projects/{public_id} 또는 /admin/studies/{public_id} */
+export function updateActivity(
+  kind: ActivityKind,
+  publicId: string,
+  payload: ActivityManageRequest,
+): Promise<Activity> {
+  return apiRequest<Activity>(
+    `/admin/${kind}/${encodeURIComponent(publicId)}`,
+    {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+/** DELETE /admin/projects/{public_id} 또는 /admin/studies/{public_id} */
+export function deleteActivity(
+  kind: ActivityKind,
+  publicId: string,
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/admin/${kind}/${encodeURIComponent(publicId)}`,
     {
       method: "DELETE",
       headers: authHeaders(),

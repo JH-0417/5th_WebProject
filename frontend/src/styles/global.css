@@ -59,7 +59,8 @@ body {
 }
 
 .field input,
-.field textarea {
+.field textarea,
+.field select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #d1d5db;
@@ -69,7 +70,8 @@ body {
 }
 
 .field input:focus,
-.field textarea:focus {
+.field textarea:focus,
+.field select:focus {
   outline: 2px solid #93c5fd;
   border-color: #60a5fa;
 }
@@ -223,6 +225,17 @@ button[type="submit"]:disabled {
 .filter-btn-active {
   background: #1d4ed8;
   border-color: #1d4ed8;
+  color: #fff;
+}
+
+.link-button {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+}
+
+.link-button.filter-btn-active {
   color: #fff;
 }
 
