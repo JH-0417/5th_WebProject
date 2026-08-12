@@ -2,6 +2,8 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AdminRoute } from "./components/AdminRoute";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminMembersPage } from "./pages/AdminMembersPage";
+import { AdminNoticeFormPage } from "./pages/AdminNoticeFormPage";
+import { AdminNoticesPage } from "./pages/AdminNoticesPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { NoticeDetailPage } from "./pages/NoticeDetailPage";
@@ -16,6 +18,7 @@ import { SignupPage } from "./pages/SignupPage";
  *   /               → HomePage (로그인 필요)
  *   /me/edit        → ProfileEditPage (로그인 필요)
  *   /admin/members  → AdminMembersPage (admin 필요)
+ *   /admin/notices  → 관리자 공지 작성·수정·삭제
  *   /notices        → 공지사항 목록·상세 (공개)
  *   /login, /signup → 인증 페이지
  */
@@ -45,6 +48,36 @@ function App() {
             <ProtectedRoute>
               <AdminRoute>
                 <AdminMembersPage />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/notices"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminNoticesPage />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/notices/new"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminNoticeFormPage />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/notices/:publicId/edit"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminNoticeFormPage />
               </AdminRoute>
             </ProtectedRoute>
           }

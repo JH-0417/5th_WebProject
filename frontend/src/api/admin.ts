@@ -5,6 +5,11 @@ import type {
   AdminMemberListResponse,
   JoinStatusFilter,
 } from "../types/admin";
+import type {
+  Notice,
+  NoticeCreateRequest,
+  NoticeUpdateRequest,
+} from "../types/notices";
 
 /**
  * 관리자 API 모음
@@ -56,6 +61,41 @@ export function rejectMember(
     `/admin/members/${publicId}/reject`,
     {
       method: "PATCH",
+      headers: authHeaders(),
+    },
+  );
+}
+
+/** POST /admin/notices — 공지사항 작성 */
+export function createNotice(payload: NoticeCreateRequest): Promise<Notice> {
+  return apiRequest<Notice>("/admin/notices", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+}
+
+/** PATCH /admin/notices/{public_id} — 공지사항 부분 수정 */
+export function updateNotice(
+  publicId: string,
+  payload: NoticeUpdateRequest,
+): Promise<Notice> {
+  return apiRequest<Notice>(
+    `/admin/notices/${encodeURIComponent(publicId)}`,
+    {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+/** DELETE /admin/notices/{public_id} — 공지사항 삭제 */
+export function deleteNotice(publicId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/admin/notices/${encodeURIComponent(publicId)}`,
+    {
+      method: "DELETE",
       headers: authHeaders(),
     },
   );
