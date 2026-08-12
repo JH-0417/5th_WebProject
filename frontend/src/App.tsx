@@ -4,6 +4,8 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminMembersPage } from "./pages/AdminMembersPage";
 import { AdminNoticeFormPage } from "./pages/AdminNoticeFormPage";
 import { AdminNoticesPage } from "./pages/AdminNoticesPage";
+import { ActivityDetailPage } from "./pages/ActivityDetailPage";
+import { ActivityListPage } from "./pages/ActivityListPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { NoticeDetailPage } from "./pages/NoticeDetailPage";
@@ -20,6 +22,8 @@ import { SignupPage } from "./pages/SignupPage";
  *   /admin/members  → AdminMembersPage (admin 필요)
  *   /admin/notices  → 관리자 공지 작성·수정·삭제
  *   /notices        → 공지사항 목록·상세 (공개)
+ *   /projects       → 프로젝트 목록·상세 (공개)
+ *   /studies        → 스터디 목록·상세 (공개)
  *   /login, /signup → 인증 페이지
  */
 function App() {
@@ -84,6 +88,22 @@ function App() {
         />
         <Route path="/notices" element={<NoticesPage />} />
         <Route path="/notices/:publicId" element={<NoticeDetailPage />} />
+        <Route
+          path="/projects"
+          element={<ActivityListPage kind="projects" />}
+        />
+        <Route
+          path="/projects/:publicId"
+          element={<ActivityDetailPage kind="projects" />}
+        />
+        <Route
+          path="/studies"
+          element={<ActivityListPage kind="studies" />}
+        />
+        <Route
+          path="/studies/:publicId"
+          element={<ActivityDetailPage kind="studies" />}
+        />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
