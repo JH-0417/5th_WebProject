@@ -117,6 +117,12 @@ export function HomePage() {
         ) : null}
 
         <div className="button-row">
+          <Link to="/projects" className="btn-primary-link">
+            프로젝트
+          </Link>
+          <Link to="/studies" className="btn-primary-link">
+            스터디
+          </Link>
           <Link to="/notices" className="btn-primary-link">
             공지사항
           </Link>
