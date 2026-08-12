@@ -121,9 +121,14 @@ export function HomePage() {
             공지사항
           </Link>
           {me?.role === "admin" ? (
-            <Link to="/admin/members" className="btn-primary-link">
-              가입 신청 관리
-            </Link>
+            <>
+              <Link to="/admin/notices" className="btn-primary-link">
+                공지사항 관리
+              </Link>
+              <Link to="/admin/members" className="btn-primary-link">
+                가입 신청 관리
+              </Link>
+            </>
           ) : null}
           <Link to="/me/edit" className="btn-primary-link">
             내 정보 수정
