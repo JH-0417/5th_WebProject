@@ -3,6 +3,7 @@ import { Link, NavLink, useLocation } from "react-router-dom";
 import { getAccessToken } from "../api/auth";
 
 const PUBLIC_LINKS = [
+  { to: "/about", label: "소개" },
   { to: "/projects", label: "프로젝트" },
   { to: "/studies", label: "스터디" },
   { to: "/notices", label: "공지" },
@@ -27,7 +28,12 @@ export function SiteHeader() {
     >
       <nav className="site-nav" aria-label="주요 메뉴">
         <Link to="/" className="site-brand">
-          <span aria-hidden="true">5</span>
+          <img
+            className="site-brand-logo"
+            src="/brand/gen5_logo.png"
+            alt=""
+            aria-hidden="true"
+          />
           <strong>제 5세대</strong>
         </Link>
 
