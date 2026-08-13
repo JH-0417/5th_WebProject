@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AdminRoute } from "./components/AdminRoute";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { SiteHeader } from "./components/SiteHeader";
 import { AdminActivitiesPage } from "./pages/AdminActivitiesPage";
 import { AdminActivityFormPage } from "./pages/AdminActivityFormPage";
 import { AdminFaqsPage } from "./pages/AdminFaqsPage";
@@ -15,6 +16,7 @@ import { FaqsPage } from "./pages/FaqsPage";
 import { GalleryDetailPage } from "./pages/GalleryDetailPage";
 import { GalleryPage } from "./pages/GalleryPage";
 import { HomePage } from "./pages/HomePage";
+import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { NoticeDetailPage } from "./pages/NoticeDetailPage";
 import { NoticesPage } from "./pages/NoticesPage";
@@ -25,7 +27,8 @@ import { SignupPage } from "./pages/SignupPage";
  * 앱 최상위 컴포넌트 + URL 라우팅
  *
  * 경로 정리:
- *   /               → HomePage (로그인 필요)
+ *   /               → LandingPage (공개)
+ *   /dashboard      → HomePage (로그인 필요)
  *   /me/edit        → ProfileEditPage (로그인 필요)
  *   /admin/members  → AdminMembersPage (admin 필요)
  *   /admin/notices  → 관리자 공지 작성·수정·삭제
@@ -44,9 +47,11 @@ import { SignupPage } from "./pages/SignupPage";
 function App() {
   return (
     <BrowserRouter>
+      <SiteHeader />
       <Routes>
+        <Route path="/" element={<LandingPage />} />
         <Route
-          path="/"
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <HomePage />
@@ -205,7 +210,7 @@ function App() {
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

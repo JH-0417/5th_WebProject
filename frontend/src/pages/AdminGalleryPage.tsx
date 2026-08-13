@@ -282,7 +282,7 @@ export function AdminGalleryPage() {
         </ul>
 
         <p className="switch-link">
-          <Link to="/">홈으로 돌아가기</Link>
+          <Link to="/dashboard">대시보드로 돌아가기</Link>
         </p>
       </section>
     </main>
