@@ -1,7 +1,7 @@
 """
 비밀번호 처리 및 JWT 발급 로직을 모아두는 모듈.
 
-passlib(bcrypt)를 사용해 비밀번호를 해싱/검증하고,
+bcrypt를 직접 사용해 비밀번호를 해싱/검증하고,
 python-jose를 사용해 JWT Access Token을 생성합니다.
 회원가입/로그인 로직은 비밀번호 값을 직접 다루지 않고 반드시 이 모듈의 함수를
 거치도록 구조화되어 있어서, 알고리즘을 교체하더라도 호출부(auth.py 등)는
@@ -11,10 +11,10 @@ python-jose를 사용해 JWT Access Token을 생성합니다.
 import os
 from datetime import datetime, timedelta, timezone
 
+import bcrypt
 from dotenv import load_dotenv
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
-from passlib.context import CryptContext
 
 # ─── JWT 설정 ──────────────────────────────────────────────────────────────────
 
@@ -38,14 +38,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30")
 # 운영 환경에서는 반드시 별도 환경 변수로 설정합니다.
 TEMPORARY_PASSWORD = os.getenv("TEMPORARY_PASSWORD", "ChangeMe123!")
 
-# ─── 비밀번호 컨텍스트 ─────────────────────────────────────────────────────────
-
-# bcrypt 스킴을 사용하는 CryptContext.
-# deprecated="auto"로 설정해두면 이후 스킴을 추가/교체할 때 예전 방식으로 저장된
-# 해시를 자동으로 "구식(deprecated)"으로 표시해줘서 마이그레이션이 쉬워짐
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
 def hash_password(plain_password: str) -> str:
     """
     평문 비밀번호를 bcrypt로 해싱해서 반환합니다.
@@ -54,14 +46,26 @@ def hash_password(plain_password: str) -> str:
     호출할 때마다 다른 해시 문자열이 생성됩니다. DB에는 이 반환값(해시)만
     저장되며, 평문 비밀번호는 어디에도 저장되지 않습니다.
     """
-    return pwd_context.hash(plain_password)
+    password_bytes = plain_password.encode("utf-8")
+    if len(password_bytes) > 72:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="비밀번호는 UTF-8 기준 72바이트 이하여야 합니다.",
+        )
+    return bcrypt.hashpw(password_bytes, bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain_password: str, stored_password: str) -> bool:
     """
     로그인 시 입력한 평문 비밀번호와 DB에 저장된 bcrypt 해시값을 비교합니다.
     """
-    return pwd_context.verify(plain_password, stored_password)
+    password_bytes = plain_password.encode("utf-8")
+    if len(password_bytes) > 72:
+        return False
+    try:
+        return bcrypt.checkpw(password_bytes, stored_password.encode("utf-8"))
+    except (TypeError, ValueError):
+        return False
 
 
 def create_access_token(login_id: str) -> str:
