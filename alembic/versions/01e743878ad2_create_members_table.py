@@ -31,7 +31,7 @@ def upgrade() -> None:
     sa.Column('department', sa.String(length=50), nullable=True),
     sa.Column('grade', sa.String(length=10), nullable=True),
     sa.Column('phone_number', sa.String(length=20), nullable=False),
-    sa.Column('role', sa.Enum('admin', 'pm', 'member'), nullable=False),
+    sa.Column('role', sa.Enum('admin', 'pm', 'member', name='member_role'), nullable=False),
     sa.Column('is_approved', sa.Boolean(), nullable=False),
     sa.Column('github_username', sa.String(length=39), nullable=True),
     sa.Column('bio', sa.Text(), nullable=True),

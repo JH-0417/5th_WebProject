@@ -8,7 +8,7 @@ Create Date: 2026-07-15 16:00:00.000000
 from typing import Sequence, Union
 import re
 
-from alembic import op
+from alembic import context, op
 import sqlalchemy as sa
 
 
@@ -32,16 +32,20 @@ def _to_grade_int(raw: str) -> int:
 
 def upgrade() -> None:
     """Upgrade schema."""
-    conn = op.get_bind()
-
     # 1) 기존 문자열 grade를 정수 문자열(예: "1")로 정규화
-    rows = conn.execute(sa.text("SELECT id, grade FROM members")).fetchall()
-    for row_id, grade_raw in rows:
-        grade_int = _to_grade_int(grade_raw)
-        conn.execute(
-            sa.text("UPDATE members SET grade = :grade WHERE id = :id"),
-            {"grade": str(grade_int), "id": row_id},
-        )
+    if context.is_offline_mode():
+        # 정적 SQL 생성 시에는 조회 결과를 Python에서 순회할 수 없습니다.
+        # grade가 1~4만 허용된다는 기존 검증 규칙에 따라 첫 글자를 사용합니다.
+        op.execute("UPDATE members SET grade = substr(trim(grade), 1, 1)")
+    else:
+        conn = op.get_bind()
+        rows = conn.execute(sa.text("SELECT id, grade FROM members")).fetchall()
+        for row_id, grade_raw in rows:
+            grade_int = _to_grade_int(grade_raw)
+            conn.execute(
+                sa.text("UPDATE members SET grade = :grade WHERE id = :id"),
+                {"grade": str(grade_int), "id": row_id},
+            )
 
     # 2) 컬럼 타입을 Integer로 변경 (SQLite는 batch_alter 사용)
     with op.batch_alter_table("members", schema=None) as batch_op:
@@ -50,6 +54,7 @@ def upgrade() -> None:
             existing_type=sa.VARCHAR(length=10),
             type_=sa.Integer(),
             existing_nullable=False,
+            postgresql_using="grade::integer",
         )
 
 
@@ -61,6 +66,7 @@ def downgrade() -> None:
             existing_type=sa.Integer(),
             type_=sa.VARCHAR(length=10),
             existing_nullable=False,
+            postgresql_using="grade::text",
         )
 
     # 정수를 다시 "N학년" 문자열로 되돌림

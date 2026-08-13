@@ -8,29 +8,35 @@ python-jose를 사용해 JWT Access Token을 생성합니다.
 수정할 필요가 없습니다.
 """
 
+import os
 from datetime import datetime, timedelta, timezone
 
+from dotenv import load_dotenv
 from fastapi import HTTPException, status
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 # ─── JWT 설정 ──────────────────────────────────────────────────────────────────
 
+load_dotenv()
+
 # SECRET_KEY: JWT 서명(Signature) 생성·검증에 사용되는 비밀 키.
 # 이 값이 유출되면 공격자가 임의의 토큰을 위조할 수 있으므로, 실제 운영 환경에서는
 # 환경 변수(.env)로 관리하고 코드에 직접 노출하지 않아야 함.
-SECRET_KEY = "change-this-to-a-long-random-secret-in-production"
+SECRET_KEY = os.getenv(
+    "SECRET_KEY", "change-this-to-a-long-random-secret-in-production"
+)
 
 # ALGORITHM: JWT 서명 알고리즘. HS256(HMAC-SHA256)은 단일 SECRET_KEY로
 # 서명과 검증을 모두 수행하는 대칭 방식이며, 가장 널리 사용됨.
-ALGORITHM = "HS256"
+ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
 # ACCESS_TOKEN_EXPIRE_MINUTES: Access Token 만료 시간(분).
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
 # 관리자 비밀번호 초기화(방식 A)에 사용하는 고정 임시 비밀번호.
-# 운영 환경에서는 환경 변수로 분리하는 것을 권장합니다.
-TEMPORARY_PASSWORD = "ChangeMe123!"
+# 운영 환경에서는 반드시 별도 환경 변수로 설정합니다.
+TEMPORARY_PASSWORD = os.getenv("TEMPORARY_PASSWORD", "ChangeMe123!")
 
 # ─── 비밀번호 컨텍스트 ─────────────────────────────────────────────────────────
 

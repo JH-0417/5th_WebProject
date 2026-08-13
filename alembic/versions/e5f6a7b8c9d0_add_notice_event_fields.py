@@ -26,7 +26,7 @@ def upgrade() -> None:
         sa.Column("public_id", sa.String(length=36), nullable=False),
         sa.Column("title", sa.String(length=100), nullable=False),
         sa.Column("content", sa.Text(), nullable=False),
-        sa.Column("is_pinned", sa.Boolean(), nullable=False, server_default=sa.text("0")),
+        sa.Column("is_pinned", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.Column("event_start", sa.DateTime(timezone=True), nullable=True),
         sa.Column("event_end", sa.DateTime(timezone=True), nullable=True),
         sa.Column("location", sa.String(length=200), nullable=True),
