@@ -5,10 +5,14 @@
 검증 실패(422)와 예상치 못한 서버 오류(500) 응답 형식을 통일합니다.
 """
 
+import logging
+
 from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+
+logger = logging.getLogger(__name__)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -57,6 +61,12 @@ def register_exception_handlers(app: FastAPI) -> None:
         exc: Exception,
     ) -> JSONResponse:
         # 스택 트레이스는 서버 로그에만 남기고, 클라이언트에는 일반 메시지만 반환합니다.
+        logger.error(
+            "처리되지 않은 서버 오류: %s %s",
+            request.method,
+            request.url.path,
+            exc_info=(type(exc), exc, exc.__traceback__),
+        )
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "서버 내부 오류가 발생했습니다."},
