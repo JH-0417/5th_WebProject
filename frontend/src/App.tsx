@@ -8,6 +8,8 @@ import { AdminNoticeFormPage } from "./pages/AdminNoticeFormPage";
 import { AdminNoticesPage } from "./pages/AdminNoticesPage";
 import { ActivityDetailPage } from "./pages/ActivityDetailPage";
 import { ActivityListPage } from "./pages/ActivityListPage";
+import { GalleryDetailPage } from "./pages/GalleryDetailPage";
+import { GalleryPage } from "./pages/GalleryPage";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { NoticeDetailPage } from "./pages/NoticeDetailPage";
@@ -28,6 +30,7 @@ import { SignupPage } from "./pages/SignupPage";
  *   /notices        → 공지사항 목록·상세 (공개)
  *   /projects       → 프로젝트 목록·상세 (공개)
  *   /studies        → 스터디 목록·상세 (공개)
+ *   /gallery        → 갤러리 목록·상세 (공개)
  *   /login, /signup → 인증 페이지
  */
 function App() {
@@ -168,6 +171,8 @@ function App() {
           path="/studies/:publicId"
           element={<ActivityDetailPage kind="studies" />}
         />
+        <Route path="/gallery" element={<GalleryPage />} />
+        <Route path="/gallery/:publicId" element={<GalleryDetailPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
