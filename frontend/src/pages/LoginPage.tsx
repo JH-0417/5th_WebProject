@@ -8,7 +8,7 @@ import { login, saveAccessToken } from "../api/auth";
  * 흐름:
  * 1) 사용자가 아이디/비밀번호 입력
  * 2) POST /auth/login 호출
- * 3) 성공하면 access_token 을 localStorage 에 저장 후 홈(/)으로 이동
+ * 3) 성공하면 access_token 을 localStorage 에 저장 후 대시보드로 이동
  * 4) 실패하면 서버가 준 메시지를 화면에 표시
  */
 export function LoginPage() {
@@ -29,8 +29,8 @@ export function LoginPage() {
         password,
       });
       saveAccessToken(result.access_token);
-      // 로그인 성공 → 홈으로 이동
-      navigate("/", { replace: true });
+      // 로그인 성공 → 회원 대시보드로 이동
+      navigate("/dashboard", { replace: true });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "로그인에 실패했습니다.";
