@@ -111,15 +111,19 @@ export function LandingPage() {
               >
                 {loggedIn ? "내 대시보드" : "동아리 지원하기"}
               </Link>
-              <a href="#about" className="landing-secondary-action">
+              <Link to="/about" className="landing-secondary-action">
                 더 알아보기
-              </a>
+              </Link>
             </div>
           </div>
 
           <div className="landing-visual" aria-hidden="true">
-            <div className="landing-generation-mark">5</div>
-            <img src={heroImage} alt="" />
+            <img
+              className="landing-generation-mark"
+              src="/brand/gen5_logo.png"
+              alt=""
+            />
+            <img className="landing-hero-image" src={heroImage} alt="" />
             <span className="landing-visual-label">V-GENERATION</span>
           </div>
         </div>
@@ -215,7 +219,10 @@ export function LandingPage() {
 
       <footer className="landing-footer">
         <div className="landing-footer-brand">
-          <strong>제 5세대</strong>
+          <div>
+            <img src="/brand/gen5_logo.png" alt="" aria-hidden="true" />
+            <strong>제 5세대</strong>
+          </div>
           <span>건국대학교 글로컬캠퍼스 IT 동아리</span>
           <div className="landing-social-links">
             <a
@@ -251,7 +258,7 @@ export function LandingPage() {
         <div className="landing-footer-links">
           <strong>Quick Links</strong>
           <Link to="/">Home</Link>
-          <a href="#about">About</a>
+          <Link to="/about">About</Link>
           <Link to="/projects">Projects</Link>
           <Link to="/calendar">Events</Link>
           <Link to="/gallery">Gallery</Link>
