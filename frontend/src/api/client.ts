@@ -17,14 +17,17 @@ export async function apiRequest<T>(
   options: RequestInit = {},
 ): Promise<T> {
   let response: Response;
+  const headers = new Headers(options.headers);
+
+  // FormData는 브라우저가 multipart boundary를 포함한 Content-Type을 자동 설정해야 합니다.
+  if (!(options.body instanceof FormData) && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
 
   try {
     response = await fetch(`${API_BASE_URL}${path}`, {
       ...options,
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers ?? {}),
-      },
+      headers,
     });
   } catch {
     throw new Error(

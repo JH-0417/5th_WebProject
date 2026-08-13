@@ -644,3 +644,63 @@ button[type="submit"]:disabled {
 .gallery-detail-info h1 {
   margin: 0 0 6px;
 }
+
+.card-admin-gallery {
+  width: min(100%, 1040px);
+}
+
+.admin-gallery-upload {
+  margin-bottom: 24px;
+  padding: 18px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.admin-gallery-feedback {
+  margin-bottom: 16px;
+}
+
+.admin-gallery-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.admin-gallery-card {
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.admin-gallery-card > img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: #e5e7eb;
+}
+
+.admin-gallery-card-body {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.admin-gallery-card-body time {
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.admin-gallery-card-body > .btn-small {
+  justify-self: start;
+}
+
+.admin-gallery-actions {
+  display: flex;
+  gap: 8px;
+}

@@ -137,6 +137,9 @@ export function HomePage() {
               <Link to="/admin/notices" className="btn-primary-link">
                 공지사항 관리
               </Link>
+              <Link to="/admin/gallery" className="btn-primary-link">
+                갤러리 관리
+              </Link>
               <Link to="/admin/members" className="btn-primary-link">
                 가입 신청 관리
               </Link>

@@ -3,6 +3,7 @@ import { AdminRoute } from "./components/AdminRoute";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminActivitiesPage } from "./pages/AdminActivitiesPage";
 import { AdminActivityFormPage } from "./pages/AdminActivityFormPage";
+import { AdminGalleryPage } from "./pages/AdminGalleryPage";
 import { AdminMembersPage } from "./pages/AdminMembersPage";
 import { AdminNoticeFormPage } from "./pages/AdminNoticeFormPage";
 import { AdminNoticesPage } from "./pages/AdminNoticesPage";
@@ -27,6 +28,7 @@ import { SignupPage } from "./pages/SignupPage";
  *   /admin/notices  → 관리자 공지 작성·수정·삭제
  *   /admin/projects → 관리자 프로젝트 작성·수정·삭제
  *   /admin/studies  → 관리자 스터디 작성·수정·삭제
+ *   /admin/gallery  → 관리자 갤러리 등록·수정·삭제
  *   /notices        → 공지사항 목록·상세 (공개)
  *   /projects       → 프로젝트 목록·상세 (공개)
  *   /studies        → 스터디 목록·상세 (공개)
@@ -149,6 +151,16 @@ function App() {
             <ProtectedRoute>
               <AdminRoute>
                 <AdminActivityFormPage kind="studies" />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/gallery"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminGalleryPage />
               </AdminRoute>
             </ProtectedRoute>
           }
