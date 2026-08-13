@@ -129,6 +129,9 @@ export function HomePage() {
           <Link to="/gallery" className="btn-primary-link">
             활동 갤러리
           </Link>
+          <Link to="/faqs" className="btn-primary-link">
+            자주 묻는 질문
+          </Link>
           {me?.role === "admin" ? (
             <>
               <Link to="/admin/projects" className="btn-primary-link">

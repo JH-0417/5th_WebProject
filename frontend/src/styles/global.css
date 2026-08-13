@@ -704,3 +704,51 @@ button[type="submit"]:disabled {
   display: flex;
   gap: 8px;
 }
+
+.card-faq {
+  width: min(100%, 720px);
+}
+
+.faq-list {
+  display: grid;
+  gap: 10px;
+}
+
+.faq-item {
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.faq-item[open] {
+  border-color: #93c5fd;
+  background: #f8fafc;
+}
+
+.faq-item summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-icon {
+  flex: 0 0 auto;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.faq-item p {
+  margin: 0;
+  padding: 0 16px 16px;
+  color: #4b5563;
+  white-space: pre-wrap;
+}
