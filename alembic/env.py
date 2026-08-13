@@ -29,6 +29,10 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 target_metadata = Base.metadata
 
+
+def is_sqlite_url(url: str) -> bool:
+    return url.startswith("sqlite")
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
@@ -53,7 +57,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
-        render_as_batch=True,  # SQLite는 ALTER로 제약조건을 못 바꿔서 batch mode(테이블 재생성 방식) 필요
+        render_as_batch=is_sqlite_url(url),
     )
 
     with context.begin_transaction():
@@ -77,7 +81,7 @@ def run_migrations_online() -> None:
         context.configure(
             connection=connection,
             target_metadata=target_metadata,
-            render_as_batch=True,  # SQLite는 ALTER로 제약조건을 못 바꿔서 batch mode(테이블 재생성 방식) 필요
+            render_as_batch=connection.dialect.name == "sqlite",
         )
 
         with context.begin_transaction():

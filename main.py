@@ -1,3 +1,6 @@
+import os
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -16,6 +19,23 @@ from studies import router as studies_router
 # 최초 실행 및 스키마 변경 시: `alembic upgrade head`
 # (models.py 변경 후에는 `alembic revision --autogenerate -m "설명"`으로 마이그레이션 생성)
 
+load_dotenv()
+
+LOCAL_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
+]
+DEPLOYED_CORS_ORIGINS = [
+    origin.strip().rstrip("/")
+    for origin in os.getenv("CORS_ORIGINS", "").split(",")
+    if origin.strip()
+]
+CORS_ORIGINS = list(dict.fromkeys(LOCAL_CORS_ORIGINS + DEPLOYED_CORS_ORIGINS))
+
 app = FastAPI(
     title="제 5세대 웹사이트 API",
     description="동아리 부원 관리, 프로젝트, 공지사항, 갤러리, 캘린더, 지원서",
@@ -26,17 +46,10 @@ register_exception_handlers(app)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:8000",
-        "http://localhost:8000",
-    ],
-    allow_credentials = True, # 로그인 기능
-    allow_methods=["*"],    # GET,POST 등 허용
-    allow_headers=["*"],    # 헤더 허용
+    allow_origins=CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(auth_router)

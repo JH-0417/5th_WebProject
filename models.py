@@ -31,10 +31,13 @@ class MemberDB(Base):
     department: Mapped[str] = mapped_column(String(50))  # 과
     grade: Mapped[int] = mapped_column(Integer)  # 학년 (1~4)
     phone_number: Mapped[str] = mapped_column(String(20), unique=True)  # 휴대폰 번호 (하이픈 없이 숫자만, "010" 포함 전체 저장)
-    role: Mapped[str] = mapped_column(Enum("admin", "pm", "member"), default="member")  # 역할 admin, pm, member
+    role: Mapped[str] = mapped_column(
+        Enum("admin", "pm", "member", name="member_role"),
+        default="member",
+    )  # 역할 admin, pm, member
     is_approved: Mapped[bool] = mapped_column(default=False)  # 가입 승인 여부 (join_status=approved 와 동기화)
     join_status: Mapped[str] = mapped_column(
-        Enum("pending", "approved", "rejected"),
+        Enum("pending", "approved", "rejected", name="member_join_status"),
         default="pending",
     )  # 가입 심사 상태: 대기 / 승인 / 탈락
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)  # 이메일
@@ -58,11 +61,11 @@ class ProjectDB(Base):
     description: Mapped[str] = mapped_column(Text)
     tech_stack: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(
-        Enum("planned", "in_progress", "completed"),
+        Enum("planned", "in_progress", "completed", name="project_status"),
         default="planned",
     )
     category: Mapped[str] = mapped_column(
-        Enum("project", "study"),
+        Enum("project", "study", name="project_category"),
         default="project",
     )
     created_at: Mapped[datetime] = mapped_column(
