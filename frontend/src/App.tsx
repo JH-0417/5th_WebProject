@@ -10,6 +10,7 @@ import { AdminNoticeFormPage } from "./pages/AdminNoticeFormPage";
 import { AdminNoticesPage } from "./pages/AdminNoticesPage";
 import { ActivityDetailPage } from "./pages/ActivityDetailPage";
 import { ActivityListPage } from "./pages/ActivityListPage";
+import { CalendarPage } from "./pages/CalendarPage";
 import { FaqsPage } from "./pages/FaqsPage";
 import { GalleryDetailPage } from "./pages/GalleryDetailPage";
 import { GalleryPage } from "./pages/GalleryPage";
@@ -37,6 +38,7 @@ import { SignupPage } from "./pages/SignupPage";
  *   /studies        → 스터디 목록·상세 (공개)
  *   /gallery        → 갤러리 목록·상세 (공개)
  *   /faqs           → 자주 묻는 질문 목록 (공개)
+ *   /calendar       → 동아리 일정 캘린더 (공개)
  *   /login, /signup → 인증 페이지
  */
 function App() {
@@ -200,6 +202,7 @@ function App() {
         <Route path="/gallery" element={<GalleryPage />} />
         <Route path="/gallery/:publicId" element={<GalleryDetailPage />} />
         <Route path="/faqs" element={<FaqsPage />} />
+        <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="*" element={<Navigate to="/login" replace />} />

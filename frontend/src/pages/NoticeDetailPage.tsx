@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { fetchNotice } from "../api/notices";
 import type { Notice } from "../types/notices";
 import { formatDateTime } from "../utils/date";
@@ -7,9 +7,12 @@ import { formatDateTime } from "../utils/date";
 /** 공개 공지사항 상세 페이지 */
 export function NoticeDetailPage() {
   const { publicId } = useParams<{ publicId: string }>();
+  const location = useLocation();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fromCalendar =
+    (location.state as { from?: string } | null)?.from === "/calendar";
 
   useEffect(() => {
     let cancelled = false;
@@ -85,7 +88,9 @@ export function NoticeDetailPage() {
         ) : null}
 
         <p className="switch-link">
-          <Link to="/notices">목록으로 돌아가기</Link>
+          <Link to={fromCalendar ? "/calendar" : "/notices"}>
+            {fromCalendar ? "캘린더로 돌아가기" : "목록으로 돌아가기"}
+          </Link>
         </p>
       </article>
     </main>
