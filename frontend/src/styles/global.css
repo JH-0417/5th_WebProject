@@ -752,3 +752,49 @@ button[type="submit"]:disabled {
   color: #4b5563;
   white-space: pre-wrap;
 }
+
+.card-admin-faq {
+  width: min(100%, 760px);
+}
+
+.admin-faq-form {
+  margin-bottom: 24px;
+  padding: 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.admin-faq-feedback {
+  margin-bottom: 16px;
+}
+
+.admin-faq-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.admin-faq-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+}
+
+.admin-faq-item p {
+  margin: 8px 0 0;
+  color: #4b5563;
+  white-space: pre-wrap;
+}
+
+@media (max-width: 560px) {
+  .admin-faq-item {
+    flex-direction: column;
+  }
+}

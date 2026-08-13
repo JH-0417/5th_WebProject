@@ -16,6 +16,7 @@ import type {
   ActivityManageRequest,
 } from "../types/activities";
 import type { GalleryItem } from "../types/gallery";
+import type { Faq, FaqCreateRequest } from "../types/faqs";
 
 /**
  * 관리자 API 모음
@@ -206,6 +207,26 @@ export function deleteGalleryImage(
 ): Promise<{ message: string }> {
   return apiRequest<{ message: string }>(
     `/admin/gallery/${encodeURIComponent(publicId)}`,
+    {
+      method: "DELETE",
+      headers: authHeaders(),
+    },
+  );
+}
+
+/** POST /admin/faqs — FAQ 등록 */
+export function createFaq(payload: FaqCreateRequest): Promise<Faq> {
+  return apiRequest<Faq>("/admin/faqs", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+}
+
+/** DELETE /admin/faqs/{public_id} — FAQ 삭제 */
+export function deleteFaq(publicId: string): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/admin/faqs/${encodeURIComponent(publicId)}`,
     {
       method: "DELETE",
       headers: authHeaders(),
