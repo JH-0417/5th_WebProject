@@ -27,7 +27,7 @@ ALLOWED_CONTENT_TYPES = {
     "image/webp",
     "image/gif",
 }
-MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024  # 5MB
+MAX_FILE_SIZE_BYTES = 8 * 1024 * 1024  # 8MB
 
 
 def _configure_cloudinary() -> None:
@@ -56,7 +56,7 @@ def validate_gallery_image(content_type: Optional[str], size: int) -> None:
     if size > MAX_FILE_SIZE_BYTES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="이미지 크기는 5MB 이하여야 합니다.",
+            detail="이미지 크기는 8MB 이하여야 합니다.",
         )
 
 

@@ -477,7 +477,7 @@ def remove_admin_notice(
     status_code=status.HTTP_201_CREATED,
 )
 async def upload_admin_gallery(
-    file: UploadFile = File(..., description="업로드할 활동 사진 (jpg/png/webp/gif, 5MB 이하)"),
+    file: UploadFile = File(..., description="업로드할 활동 사진 (jpg/png/webp/gif, 8MB 이하)"),
     caption: Optional[str] = Form(default=None, description="사진 설명 (선택)"),
     current_member: MemberDB = Depends(require_admin),
     db: Session = Depends(get_db),

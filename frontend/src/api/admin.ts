@@ -15,6 +15,7 @@ import type {
   ActivityKind,
   ActivityManageRequest,
 } from "../types/activities";
+import type { GalleryItem } from "../types/gallery";
 
 /**
  * 관리자 API 모음
@@ -141,6 +142,70 @@ export function deleteActivity(
 ): Promise<{ message: string }> {
   return apiRequest<{ message: string }>(
     `/admin/${kind}/${encodeURIComponent(publicId)}`,
+    {
+      method: "DELETE",
+      headers: authHeaders(),
+    },
+  );
+}
+
+/** POST /admin/gallery/upload — Cloudinary 이미지 파일 업로드 */
+export function uploadGalleryImage(
+  file: File,
+  caption: string,
+): Promise<GalleryItem> {
+  const formData = new FormData();
+  formData.append("file", file);
+  if (caption.trim()) {
+    formData.append("caption", caption.trim());
+  }
+
+  return apiRequest<GalleryItem>("/admin/gallery/upload", {
+    method: "POST",
+    headers: authHeaders(),
+    body: formData,
+  });
+}
+
+/** PATCH /admin/gallery/{public_id} — 사진 설명 수정 */
+export function updateGalleryCaption(
+  publicId: string,
+  caption: string,
+): Promise<GalleryItem> {
+  return apiRequest<GalleryItem>(
+    `/admin/gallery/${encodeURIComponent(publicId)}`,
+    {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify({ caption: caption.trim() || null }),
+    },
+  );
+}
+
+/** PATCH /admin/gallery/{public_id}/image — 이미지 파일 교체 */
+export function replaceGalleryImage(
+  publicId: string,
+  file: File,
+): Promise<GalleryItem> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return apiRequest<GalleryItem>(
+    `/admin/gallery/${encodeURIComponent(publicId)}/image`,
+    {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: formData,
+    },
+  );
+}
+
+/** DELETE /admin/gallery/{public_id} — 갤러리 사진 삭제 */
+export function deleteGalleryImage(
+  publicId: string,
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/admin/gallery/${encodeURIComponent(publicId)}`,
     {
       method: "DELETE",
       headers: authHeaders(),
