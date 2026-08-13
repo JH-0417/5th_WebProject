@@ -132,6 +132,9 @@ export function HomePage() {
           <Link to="/faqs" className="btn-primary-link">
             자주 묻는 질문
           </Link>
+          <Link to="/calendar" className="btn-primary-link">
+            일정 캘린더
+          </Link>
           {me?.role === "admin" ? (
             <>
               <Link to="/admin/projects" className="btn-primary-link">
