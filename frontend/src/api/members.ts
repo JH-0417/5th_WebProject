@@ -5,6 +5,7 @@ import type {
   PasswordChangeRequest,
   ProfileUpdateRequest,
 } from "../types/auth";
+import type { MemberListResponse } from "../types/members";
 
 /**
  * 회원(본인) 관련 API
@@ -19,6 +20,15 @@ function authHeaders(): HeadersInit {
     throw new Error("로그인이 필요합니다.");
   }
   return { Authorization: `Bearer ${token}` };
+}
+
+/** GET /members — 비로그인은 임원진, 로그인 회원은 전체 승인 회원 조회 */
+export function fetchMembers(): Promise<MemberListResponse> {
+  const token = getAccessToken();
+  return apiRequest<MemberListResponse>("/members", {
+    method: "GET",
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
 }
 
 /**

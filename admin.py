@@ -14,6 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from crud import (
+    count_members_by_system_role,
     create_faq,
     create_gallery,
     create_notice,
@@ -29,6 +30,8 @@ from crud import (
     get_member_by_public_id,
     get_members,
     set_member_join_status,
+    set_member_club_position,
+    set_member_system_role,
     update_gallery,
     update_member,
     update_member_password,
@@ -48,6 +51,9 @@ from schemas import (
     MemberAdminListResponse,
     MemberAdminResponse,
     MemberJoinActionResponse,
+    MemberClubPositionUpdateRequest,
+    MemberRoleActionResponse,
+    MemberSystemRoleUpdateRequest,
     MemberResponse,
     MemberUpdateRequest,
     NoticeCreateRequest,
@@ -80,7 +86,8 @@ def admin_test(current_member: MemberDB = Depends(require_admin)):
     return {
         "message": "관리자 인증 성공",
         "admin": current_member.name,
-        "role": current_member.role,
+        "system_role": current_member.system_role,
+        "club_position": current_member.club_position,
     }
 
 
@@ -159,6 +166,100 @@ def reject_member(
     }
 
 
+@router.patch(
+    "/members/{public_id}/system-role",
+    response_model=MemberRoleActionResponse,
+)
+def change_member_system_role(
+    public_id: str,
+    payload: MemberSystemRoleUpdateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 사이트 권한 변경 API.
+
+    - 승인된 회원의 권한만 member / admin으로 변경할 수 있습니다.
+    - 관리자는 본인의 admin 권한을 스스로 내릴 수 없습니다.
+    - 마지막 admin의 권한은 변경할 수 없습니다.
+    """
+    target = get_member_by_public_id(db, public_id)
+    if target is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 회원을 찾을 수 없습니다.",
+        )
+
+    if target.join_status != "approved" or not target.is_approved:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="승인된 회원의 역할만 변경할 수 있습니다.",
+        )
+
+    if payload.system_role == target.system_role:
+        return {
+            "message": "이미 선택한 역할로 설정되어 있습니다.",
+            "member": MemberAdminResponse.model_validate(target),
+        }
+
+    if target.id == current_member.id and payload.system_role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="본인의 admin 권한은 스스로 변경할 수 없습니다.",
+        )
+
+    if (
+        target.system_role == "admin"
+        and payload.system_role != "admin"
+        and count_members_by_system_role(db, "admin") <= 1
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="마지막 관리자의 권한은 변경할 수 없습니다.",
+        )
+
+    member = set_member_system_role(db, public_id, payload.system_role)
+    return {
+        "message": f"{target.name} 회원의 사이트 권한을 {payload.system_role}(으)로 변경했습니다.",
+        "member": MemberAdminResponse.model_validate(member),
+    }
+
+
+@router.patch(
+    "/members/{public_id}/club-position",
+    response_model=MemberRoleActionResponse,
+)
+def change_member_club_position(
+    public_id: str,
+    payload: MemberClubPositionUpdateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """승인된 회원의 동아리 직책을 변경합니다."""
+    target = get_member_by_public_id(db, public_id)
+    if target is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 회원을 찾을 수 없습니다.",
+        )
+    if target.join_status != "approved" or not target.is_approved:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="승인된 회원의 직책만 변경할 수 있습니다.",
+        )
+    if payload.club_position == target.club_position:
+        return {
+            "message": "이미 선택한 직책으로 설정되어 있습니다.",
+            "member": MemberAdminResponse.model_validate(target),
+        }
+
+    member = set_member_club_position(db, public_id, payload.club_position)
+    return {
+        "message": f"{target.name} 회원의 동아리 직책을 변경했습니다.",
+        "member": MemberAdminResponse.model_validate(member),
+    }
+
+
 @router.patch("/members/{public_id}", response_model=MemberResponse)
 def patch_member(
     public_id: str,
@@ -214,7 +315,7 @@ def remove_member(
     관리자용 회원 삭제 API.
 
     - require_admin()으로 관리자만 접근 가능합니다.
-    - role이 admin인 회원은 삭제할 수 없습니다. (먼저 role을 내린 뒤 삭제)
+    - system_role이 admin인 회원은 삭제할 수 없습니다.
     - 성공 시 204 No Content를 반환합니다.
     - 회원이 없으면 404를 반환합니다.
     """
@@ -224,10 +325,10 @@ def remove_member(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="해당 회원을 찾을 수 없습니다.",
         )
-    if member.role == "admin":
+    if member.system_role == "admin":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="admin 권한 회원은 삭제할 수 없습니다. role을 변경한 뒤 다시 시도하세요.",
+            detail="admin 권한 회원은 삭제할 수 없습니다. 권한을 변경한 뒤 다시 시도하세요.",
         )
 
     delete_member(db, public_id)
@@ -285,7 +386,7 @@ def create_admin_project(
     - category는 create_project()에서 project로 고정합니다.
     - 성공 시 201 Created + ProjectResponse를 반환합니다.
     """
-    project = create_project(db, payload.model_dump())
+    project = create_project(db, payload.model_dump(), current_member.id)
     return ProjectResponse.model_validate(project)
 
 
@@ -353,7 +454,7 @@ def create_admin_study(
     - category는 create_study()에서 study로 고정합니다.
     - 성공 시 201 Created + StudyResponse를 반환합니다.
     """
-    study = create_study(db, payload.model_dump())
+    study = create_study(db, payload.model_dump(), current_member.id)
     return StudyResponse.model_validate(study)
 
 

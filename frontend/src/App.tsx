@@ -19,6 +19,7 @@ import { GalleryPage } from "./pages/GalleryPage";
 import { HomePage } from "./pages/HomePage";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
+import { MembersPage } from "./pages/MembersPage";
 import { NoticeDetailPage } from "./pages/NoticeDetailPage";
 import { NoticesPage } from "./pages/NoticesPage";
 import { ProfileEditPage } from "./pages/ProfileEditPage";
@@ -42,6 +43,7 @@ import { SignupPage } from "./pages/SignupPage";
  *   /studies        → 스터디 목록·상세 (공개)
  *   /gallery        → 갤러리 목록·상세 (공개)
  *   /about          → 동아리 및 CI 소개 (공개)
+ *   /members        → 임원진 및 승인 회원 소개 (공개)
  *   /faqs           → 자주 묻는 질문 목록 (공개)
  *   /calendar       → 동아리 일정 캘린더 (공개)
  *   /login, /signup → 인증 페이지
@@ -207,6 +209,7 @@ function App() {
           element={<ActivityDetailPage kind="studies" />}
         />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/members" element={<MembersPage />} />
         <Route path="/gallery" element={<GalleryPage />} />
         <Route path="/gallery/:publicId" element={<GalleryDetailPage />} />
         <Route path="/faqs" element={<FaqsPage />} />

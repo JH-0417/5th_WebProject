@@ -1,9 +1,19 @@
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional
 
-from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Integer, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database import Base
 
@@ -31,10 +41,21 @@ class MemberDB(Base):
     department: Mapped[str] = mapped_column(String(50))  # 과
     grade: Mapped[int] = mapped_column(Integer)  # 학년 (1~4)
     phone_number: Mapped[str] = mapped_column(String(20), unique=True)  # 휴대폰 번호 (하이픈 없이 숫자만, "010" 포함 전체 저장)
-    role: Mapped[str] = mapped_column(
-        Enum("admin", "pm", "member", name="member_role"),
+    system_role: Mapped[str] = mapped_column(
+        Enum("admin", "member", name="member_system_role"),
         default="member",
-    )  # 역할 admin, pm, member
+    )  # 사이트 관리 권한
+    club_position: Mapped[str] = mapped_column(
+        Enum(
+            "president",
+            "vice_president",
+            "treasurer",
+            "officer",
+            "member",
+            name="member_club_position",
+        ),
+        default="member",
+    )  # 동아리 직책
     is_approved: Mapped[bool] = mapped_column(default=False)  # 가입 승인 여부 (join_status=approved 와 동기화)
     join_status: Mapped[str] = mapped_column(
         Enum("pending", "approved", "rejected", name="member_join_status"),
@@ -48,6 +69,10 @@ class MemberDB(Base):
     github_username: Mapped[Optional[str]] = mapped_column(String(39))  # GitHub 사용자명 # 사진도 포함?
     bio: Mapped[Optional[str]] = mapped_column(Text)  # 소개
     tech_stack: Mapped[Optional[str]] = mapped_column(Text)  # 사용·관심 기술
+    activity_memberships: Mapped[List["ActivityMembershipDB"]] = relationship(
+        back_populates="member",
+        cascade="all, delete-orphan",
+    )
 
 
 # ─── 프로젝트 ───────────────────────────────────────────────────────────
@@ -79,6 +104,42 @@ class ProjectDB(Base):
         onupdate=utc_now,
         server_default=func.now(),
     )
+    memberships: Mapped[List["ActivityMembershipDB"]] = relationship(
+        back_populates="activity",
+        cascade="all, delete-orphan",
+        order_by="ActivityMembershipDB.id",
+    )
+
+
+class ActivityMembershipDB(Base):
+    """프로젝트·스터디마다 회원이 맡은 역할을 저장하는 연결 테이블."""
+
+    __tablename__ = "activity_memberships"
+    __table_args__ = (
+        UniqueConstraint("activity_id", "member_id", name="uq_activity_member"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    activity_id: Mapped[int] = mapped_column(
+        ForeignKey("projects.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("members.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    role: Mapped[str] = mapped_column(
+        Enum("leader", "member", name="activity_membership_role"),
+        default="member",
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        server_default=func.now(),
+    )
+
+    activity: Mapped["ProjectDB"] = relationship(back_populates="memberships")
+    member: Mapped["MemberDB"] = relationship(back_populates="activity_memberships")
 
 
 # ─── 공지사항 ───────────────────────────────────────────────────────────

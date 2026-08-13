@@ -3,7 +3,10 @@ import { getAccessToken } from "./auth";
 import type {
   AdminJoinActionResponse,
   AdminMemberListResponse,
+  AdminRoleActionResponse,
+  ClubPosition,
   JoinStatusFilter,
+  SystemRole,
 } from "../types/admin";
 import type {
   Notice,
@@ -69,6 +72,36 @@ export function rejectMember(
     {
       method: "PATCH",
       headers: authHeaders(),
+    },
+  );
+}
+
+/** PATCH /admin/members/{public_id}/system-role — 사이트 관리 권한 변경 */
+export function updateMemberSystemRole(
+  publicId: string,
+  systemRole: SystemRole,
+): Promise<AdminRoleActionResponse> {
+  return apiRequest<AdminRoleActionResponse>(
+    `/admin/members/${encodeURIComponent(publicId)}/system-role`,
+    {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify({ system_role: systemRole }),
+    },
+  );
+}
+
+/** PATCH /admin/members/{public_id}/club-position — 동아리 직책 변경 */
+export function updateMemberClubPosition(
+  publicId: string,
+  clubPosition: ClubPosition,
+): Promise<AdminRoleActionResponse> {
+  return apiRequest<AdminRoleActionResponse>(
+    `/admin/members/${encodeURIComponent(publicId)}/club-position`,
+    {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify({ club_position: clubPosition }),
     },
   );
 }

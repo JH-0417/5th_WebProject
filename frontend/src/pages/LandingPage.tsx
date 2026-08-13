@@ -259,6 +259,7 @@ export function LandingPage() {
           <strong>Quick Links</strong>
           <Link to="/">Home</Link>
           <Link to="/about">About</Link>
+          <Link to="/members">Members</Link>
           <Link to="/projects">Projects</Link>
           <Link to="/calendar">Events</Link>
           <Link to="/gallery">Gallery</Link>
@@ -286,6 +287,8 @@ export function LandingPage() {
           © 2026 제 5세대. All rights reserved.
           <br />
           Made with ❤ by 5th Generation
+          <br />
+          Created by 류종걸, 박하원, 유수민
         </small>
       </footer>
     </main>

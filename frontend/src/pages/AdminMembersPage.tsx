@@ -5,7 +5,19 @@ import {
   fetchAdminMembers,
   rejectMember,
 } from "../api/admin";
-import type { AdminMember, JoinStatusFilter } from "../types/admin";
+import type {
+  AdminMember,
+  ClubPosition,
+  JoinStatusFilter,
+} from "../types/admin";
+
+const POSITION_LABELS: Record<ClubPosition, string> = {
+  president: "회장",
+  vice_president: "부회장",
+  treasurer: "총무",
+  officer: "임원",
+  member: "일반 회원",
+};
 
 /**
  * 관리자: 가입 신청 목록 + 승인/탈락
@@ -107,57 +119,67 @@ export function AdminMembersPage() {
         ) : null}
 
         <ul className="applicant-list">
-          {items.map((member) => (
-            <li key={member.public_id} className="applicant-card">
-              <div className="applicant-header">
-                <strong>
-                  {member.name} ({member.student_id})
-                </strong>
-                <span className="badge">{member.join_status}</span>
-              </div>
-              <dl className="info-list compact">
-                <div>
-                  <dt>학과</dt>
-                  <dd>
-                    {member.department} / {member.grade}학년
-                  </dd>
+          {items.map((member) => {
+            return (
+              <li key={member.public_id} className="applicant-card">
+                <div className="applicant-header">
+                  <strong>
+                    {member.name} ({member.student_id})
+                  </strong>
+                  <div className="member-badges">
+                    {member.system_role === "admin" ? (
+                      <span className="badge">관리자</span>
+                    ) : null}
+                    <span className="badge">
+                      {POSITION_LABELS[member.club_position]}
+                    </span>
+                    <span className="badge">{member.join_status}</span>
+                  </div>
                 </div>
-                <div>
-                  <dt>이메일</dt>
-                  <dd>{member.email}</dd>
-                </div>
-                <div>
-                  <dt>지원 사유</dt>
-                  <dd>{member.apply_reason || "-"}</dd>
-                </div>
-                <div>
-                  <dt>희망 활동</dt>
-                  <dd>{member.desired_activity || "-"}</dd>
-                </div>
-              </dl>
+                <dl className="info-list compact">
+                  <div>
+                    <dt>학과</dt>
+                    <dd>
+                      {member.department} / {member.grade}학년
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>이메일</dt>
+                    <dd>{member.email}</dd>
+                  </div>
+                  <div>
+                    <dt>지원 사유</dt>
+                    <dd>{member.apply_reason || "-"}</dd>
+                  </div>
+                  <div>
+                    <dt>희망 활동</dt>
+                    <dd>{member.desired_activity || "-"}</dd>
+                  </div>
+                </dl>
 
-              {member.join_status === "pending" ? (
-                <div className="button-row horizontal">
-                  <button
-                    type="button"
-                    className="btn-approve"
-                    disabled={busyId === member.public_id}
-                    onClick={() => void handleApprove(member.public_id)}
-                  >
-                    승인
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-reject"
-                    disabled={busyId === member.public_id}
-                    onClick={() => void handleReject(member.public_id)}
-                  >
-                    탈락
-                  </button>
-                </div>
-              ) : null}
-            </li>
-          ))}
+                {member.join_status === "pending" ? (
+                  <div className="button-row horizontal">
+                    <button
+                      type="button"
+                      className="btn-approve"
+                      disabled={busyId === member.public_id}
+                      onClick={() => void handleApprove(member.public_id)}
+                    >
+                      승인
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-reject"
+                      disabled={busyId === member.public_id}
+                      onClick={() => void handleReject(member.public_id)}
+                    >
+                      탈락
+                    </button>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
 
         <p className="switch-link">

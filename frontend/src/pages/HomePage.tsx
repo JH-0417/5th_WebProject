@@ -106,8 +106,12 @@ export function HomePage() {
               <dd>{me.tech_stack || "-"}</dd>
             </div>
             <div>
-              <dt>역할</dt>
-              <dd>{me.role}</dd>
+              <dt>사이트 권한</dt>
+              <dd>{me.system_role}</dd>
+            </div>
+            <div>
+              <dt>동아리 직책</dt>
+              <dd>{me.club_position}</dd>
             </div>
             <div>
               <dt>가입 상태</dt>
@@ -117,7 +121,7 @@ export function HomePage() {
         ) : null}
 
         <div className="button-row">
-          {me?.role === "admin" ? (
+          {me?.system_role === "admin" ? (
             <>
               <Link to="/admin/projects" className="btn-primary-link">
                 프로젝트·스터디 관리

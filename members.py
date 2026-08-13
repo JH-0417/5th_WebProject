@@ -5,7 +5,7 @@ Issue #4의 전체 회원 목록 조회(GET /members),
 회원 상세 조회(GET /members/{public_id})를 구현합니다.
 
 Issue #6에서 권한별 조회 범위를 아래와 같이 분리했습니다.
-- 비로그인: MemberPublicResponse (student_id 마스킹) / 임원진(admin, pm)만 조회 가능
+- 비로그인: MemberPublicResponse (student_id 마스킹) / 임원진 직책만 조회 가능
 - 로그인:   MemberResponse (student_id 완전 노출) / 전체 회원 조회 가능
 """
 
@@ -36,8 +36,8 @@ router = APIRouter(prefix="/members", tags=["회원"])
 # auto_error=False : 토큰이 없어도 403을 내지 않고 None을 반환
 _optional_bearer = HTTPBearer(auto_error=False)
 
-# 비로그인 사용자에게 공개되는 역할(임원진). 그 외 role은 비로그인에게 노출하지 않음.
-_PUBLIC_ROLES = ["admin", "pm"]
+# 비로그인 사용자에게 공개되는 동아리 임원 직책.
+_PUBLIC_POSITIONS = ["president", "vice_president", "treasurer", "officer"]
 
 
 def _to_public(member) -> dict:
@@ -50,7 +50,8 @@ def _to_public(member) -> dict:
         department=member.department,
         grade=member.grade,
         email=member.email,
-        role=member.role,
+        system_role=member.system_role,
+        club_position=member.club_position,
         github_username=member.github_username,
         bio=member.bio,
         tech_stack=member.tech_stack,
@@ -124,7 +125,8 @@ def update_my_profile(
         "grade": member.grade,
         "phone_number": member.phone_number,
         "email": member.email,
-        "role": member.role,
+        "system_role": member.system_role,
+        "club_position": member.club_position,
         "is_approved": member.is_approved,
         "join_status": member.join_status,
         "github_username": member.github_username,
@@ -159,7 +161,14 @@ def change_my_password(
 @router.get("", response_model=None)
 def list_members(
     name: Optional[str] = Query(default=None, description="이름 검색 (부분 일치)"),
-    role: Optional[str] = Query(default=None, description="역할 필터 (admin / pm / member)"),
+    system_role: Optional[str] = Query(
+        default=None,
+        description="사이트 권한 필터 (admin / member)",
+    ),
+    club_position: Optional[str] = Query(
+        default=None,
+        description="동아리 직책 필터",
+    ),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_optional_bearer),
     db: Session = Depends(get_db),
 ) -> Union[MemberListResponse, MemberPublicListResponse]:
@@ -167,22 +176,33 @@ def list_members(
     회원 목록 조회 API.
 
     - name: 이름에 해당 문자열이 포함된 회원만 반환합니다. (부분 일치)
-    - role: 해당 역할(admin / pm / member)의 회원만 반환합니다.
+    - system_role: 사이트 권한으로 필터링합니다.
+    - club_position: 동아리 직책으로 필터링합니다.
     - 두 조건을 동시에 사용하면 AND 조건으로 필터링합니다.
     - 파라미터를 생략하면 전체 목록을 반환합니다.
     - 로그인 여부에 따라 조회 범위와 응답 필드가 달라집니다.
-      - 비로그인: 임원진(admin, pm)만 조회 가능, student_id는 마스킹
-        (role=member로 필터링해도 비로그인은 빈 목록을 받습니다.)
+      - 비로그인: 임원진 직책만 조회 가능, student_id는 마스킹
       - 로그인:   전체 회원 조회 가능, student_id 완전 노출
     """
     if _is_logged_in(credentials, db):
-        members = get_members(db, name=name, role=role, join_status="approved")
+        members = get_members(
+            db,
+            name=name,
+            system_role=system_role,
+            club_position=club_position,
+            join_status="approved",
+        )
         return {
             "total": len(members),
             "items": [MemberResponse.model_validate(m).model_dump() for m in members],
         }
     members = get_members(
-        db, name=name, role=role, roles=_PUBLIC_ROLES, join_status="approved"
+        db,
+        name=name,
+        system_role=system_role,
+        club_position=club_position,
+        club_positions=_PUBLIC_POSITIONS,
+        join_status="approved",
     )
     return {
         "total": len(members),
@@ -202,7 +222,7 @@ def get_member(
     - public_id로 회원을 조회합니다.
     - 존재하지 않는 public_id이면 404 Not Found를 반환합니다.
     - 로그인 여부에 따라 조회 범위와 응답 필드가 달라집니다.
-      - 비로그인: 임원진(admin, pm)만 조회 가능, student_id는 마스킹
+      - 비로그인: 임원진 직책만 조회 가능, student_id는 마스킹
         일반 회원(member)의 public_id로 조회하면 존재 여부를 노출하지 않기 위해
         404 Not Found를 반환합니다. (403이 아닌 이유: 존재 자체를 숨기는 보안 원칙)
       - 로그인:   전체 회원 조회 가능, student_id 완전 노출
@@ -215,7 +235,7 @@ def get_member(
         )
     if _is_logged_in(credentials, db):
         return MemberResponse.model_validate(member).model_dump()
-    if member.role not in _PUBLIC_ROLES:
+    if member.club_position not in _PUBLIC_POSITIONS:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="해당 회원을 찾을 수 없습니다.",

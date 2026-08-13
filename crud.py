@@ -10,34 +10,42 @@ from typing import List, Optional
 
 from sqlalchemy.orm import Session
 
-from models import FaqDB, GalleryDB, MemberDB, NoticeDB, ProjectDB
+from models import (
+    ActivityMembershipDB,
+    FaqDB,
+    GalleryDB,
+    MemberDB,
+    NoticeDB,
+    ProjectDB,
+)
 
 
 def get_members(
     db: Session,
     name: Optional[str] = None,
-    role: Optional[str] = None,
-    roles: Optional[List[str]] = None,
+    system_role: Optional[str] = None,
+    club_position: Optional[str] = None,
+    club_positions: Optional[List[str]] = None,
     join_status: Optional[str] = None,
 ) -> List[MemberDB]:
     """
     회원 목록을 반환합니다.
 
     name이 주어지면 해당 문자열을 포함하는 이름만 필터링합니다. (부분 일치)
-    role이 주어지면 해당 역할(admin / pm / member)만 필터링합니다. (완전 일치)
-    roles가 주어지면 해당 역할 목록에 포함된 회원만 필터링합니다. (IN 조건)
-    - roles는 비로그인 사용자에게 임원진(admin, pm)만 노출할 때 사용합니다.
-    - role과 roles를 동시에 넘기면 두 조건이 모두 AND로 적용됩니다.
+    system_role은 사이트 권한, club_position은 동아리 직책을 필터링합니다.
+    club_positions는 비로그인 사용자에게 공개할 임원 직책 목록에 사용합니다.
     join_status가 주어지면 pending / approved / rejected 로 필터링합니다.
     두 조건을 동시에 사용할 수 있으며, 가입 번호(id) 오름차순으로 정렬합니다.
     """
     query = db.query(MemberDB)
     if name is not None:
         query = query.filter(MemberDB.name.contains(name))
-    if role is not None:
-        query = query.filter(MemberDB.role == role)
-    if roles is not None:
-        query = query.filter(MemberDB.role.in_(roles))
+    if system_role is not None:
+        query = query.filter(MemberDB.system_role == system_role)
+    if club_position is not None:
+        query = query.filter(MemberDB.club_position == club_position)
+    if club_positions is not None:
+        query = query.filter(MemberDB.club_position.in_(club_positions))
     if join_status is not None:
         query = query.filter(MemberDB.join_status == join_status)
     return query.order_by(MemberDB.id).all()
@@ -95,6 +103,47 @@ def set_member_join_status(
 
     member.join_status = join_status
     member.is_approved = join_status == "approved"
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+def count_members_by_system_role(db: Session, system_role: str) -> int:
+    """지정한 시스템 권한을 가진 회원 수를 반환합니다."""
+    return (
+        db.query(MemberDB)
+        .filter(MemberDB.system_role == system_role)
+        .count()
+    )
+
+
+def set_member_system_role(
+    db: Session,
+    public_id: str,
+    system_role: str,
+) -> Optional[MemberDB]:
+    """회원의 사이트 관리 권한을 변경합니다."""
+    member = get_member_by_public_id(db, public_id)
+    if member is None:
+        return None
+
+    member.system_role = system_role
+    db.commit()
+    db.refresh(member)
+    return member
+
+
+def set_member_club_position(
+    db: Session,
+    public_id: str,
+    club_position: str,
+) -> Optional[MemberDB]:
+    """회원의 동아리 직책을 변경합니다."""
+    member = get_member_by_public_id(db, public_id)
+    if member is None:
+        return None
+
+    member.club_position = club_position
     db.commit()
     db.refresh(member)
     return member
@@ -180,10 +229,23 @@ def get_study_by_public_id(db: Session, public_id: str) -> Optional[ProjectDB]:
     )
 
 
-def _insert_project_row(db: Session, data: dict) -> ProjectDB:
+def _insert_project_row(
+    db: Session,
+    data: dict,
+    leader_member_id: Optional[int] = None,
+) -> ProjectDB:
     """projects 테이블에 한 행을 추가합니다. category는 호출부가 넣은 값을 그대로 사용합니다."""
     row = ProjectDB(**data)
     db.add(row)
+    db.flush()
+    if leader_member_id is not None:
+        db.add(
+            ActivityMembershipDB(
+                activity_id=row.id,
+                member_id=leader_member_id,
+                role="leader",
+            )
+        )
     db.commit()
     db.refresh(row)
     return row
@@ -218,16 +280,24 @@ def _delete_project_row(db: Session, public_id: str) -> Optional[ProjectDB]:
     return row
 
 
-def create_project(db: Session, data: dict) -> ProjectDB:
-    """프로젝트를 생성합니다. category는 항상 project로 고정합니다."""
+def create_project(
+    db: Session,
+    data: dict,
+    leader_member_id: Optional[int] = None,
+) -> ProjectDB:
+    """프로젝트를 생성하고 생성자를 프로젝트장으로 등록합니다."""
     payload = {**data, "category": "project"}
-    return _insert_project_row(db, payload)
+    return _insert_project_row(db, payload, leader_member_id)
 
 
-def create_study(db: Session, data: dict) -> ProjectDB:
-    """스터디를 생성합니다. category는 항상 study로 고정합니다."""
+def create_study(
+    db: Session,
+    data: dict,
+    leader_member_id: Optional[int] = None,
+) -> ProjectDB:
+    """스터디를 생성하고 생성자를 스터디장으로 등록합니다."""
     payload = {**data, "category": "study"}
-    return _insert_project_row(db, payload)
+    return _insert_project_row(db, payload, leader_member_id)
 
 
 def update_project(

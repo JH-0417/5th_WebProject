@@ -8,7 +8,7 @@
 """
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -132,7 +132,10 @@ class MemberPublicResponse(BaseModel):
     department: str = Field(description="학과")
     grade: int = Field(description="학년 (1~4)")
     email: str = Field(description="이메일 (급하게 연락 방안)")
-    role: str = Field(description="역할 (admin / pm / member)")
+    system_role: str = Field(description="사이트 권한 (admin / member)")
+    club_position: str = Field(
+        description="동아리 직책 (president / vice_president / treasurer / officer / member)"
+    )
     github_username: Optional[str] = Field(default=None, description="GitHub 사용자명")
     bio: Optional[str] = Field(default=None, description="자기소개")
     tech_stack: Optional[str] = Field(default=None, description="기술 스택")
@@ -155,7 +158,10 @@ class MemberResponse(BaseModel):
     department: str = Field(description="학과")
     grade: int = Field(description="학년 (1~4)")
     email: str = Field(description="이메일")
-    role: str = Field(description="역할 (admin / pm / member)")
+    system_role: str = Field(description="사이트 권한 (admin / member)")
+    club_position: str = Field(
+        description="동아리 직책 (president / vice_president / treasurer / officer / member)"
+    )
     is_approved: bool = Field(description="가입 승인 여부")
     join_status: str = Field(description="가입 심사 상태 (pending / approved / rejected)")
     github_username: Optional[str] = Field(default=None, description="GitHub 사용자명")
@@ -188,16 +194,47 @@ class MemberJoinActionResponse(BaseModel):
     member: MemberAdminResponse = Field(description="처리된 회원 정보")
 
 
+class MemberSystemRoleUpdateRequest(BaseModel):
+    """관리자용 사이트 권한 변경 요청 스키마."""
+
+    system_role: Literal["admin", "member"] = Field(
+        description="변경할 사이트 권한 (admin / member)",
+        examples=["admin"],
+    )
+
+
+class MemberClubPositionUpdateRequest(BaseModel):
+    """관리자용 동아리 직책 변경 요청 스키마."""
+
+    club_position: Literal[
+        "president",
+        "vice_president",
+        "treasurer",
+        "officer",
+        "member",
+    ] = Field(
+        description="변경할 동아리 직책",
+        examples=["officer"],
+    )
+
+
+class MemberRoleActionResponse(BaseModel):
+    """회원 권한 또는 직책 변경 결과 응답 스키마."""
+
+    message: str = Field(description="처리 결과 메시지")
+    member: MemberAdminResponse = Field(description="역할이 변경된 회원 정보")
+
+
 class MemberUpdateRequest(BaseModel):
     """
     관리자용 회원 부분 수정(PATCH) 요청 스키마.
 
-    unique 컬럼, 승인 여부, 역할만 수정할 수 있습니다.
-    - 포함: student_id, phone_number, email, is_approved, role
+    unique 컬럼과 승인 여부만 수정할 수 있습니다.
+    - 포함: student_id, phone_number, email, is_approved
     - 제외: login_id, hashed_password, public_id
-    - 제외: name, department, grade, github_username, bio, tech_stack
+    - 제외: name, department, grade, system_role, club_position, github_username, bio, tech_stack
     모든 필드는 Optional이며, 요청에 포함된 필드만 업데이트합니다.
-    role 변경은 admin 회원 삭제 전 권한 하향(member/pm)에 사용합니다.
+    권한·직책 변경은 전용 API를 사용합니다.
     is_approved 변경 시 join_status도 함께 동기화됩니다.
     승인/탈락은 전용 API(/approve, /reject) 사용을 권장합니다.
     """
@@ -224,20 +261,13 @@ class MemberUpdateRequest(BaseModel):
         description="가입 승인 여부 (True면 join_status=approved, False면 pending)",
         examples=[True],
     )
-    role: Optional[str] = Field(
-        default=None,   #기본역할이 None뜻 아님.
-        pattern=r"^(admin|pm|member)$",
-        description="역할 (admin / pm / member). admin 삭제 전 권한 하향에 사용",
-        examples=["member"],
-    )
-
 class MemberSelfUpdateRequest(BaseModel):
     """
     본인 프로필 부분 수정(PATCH /members/me) 요청 스키마.
 
     로그인한 회원만 자신의 정보를 수정합니다.
     - 포함: department, grade, phone_number, email, github_username, bio, tech_stack
-    - 제외: login_id, student_id, name, role, is_approved, join_status, public_id, password
+    - 제외: login_id, student_id, name, system_role, club_position, is_approved, join_status, public_id, password
     모든 필드는 Optional이며, 요청에 포함된 필드만 업데이트합니다.
     """
 
@@ -397,6 +427,24 @@ class ProjectUpdateRequest(BaseModel):
     )
 
 
+class ActivityMemberSummary(BaseModel):
+    """프로젝트·스터디에 참여하는 회원의 공개 정보."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str
+    name: str
+
+
+class ActivityMembershipResponse(BaseModel):
+    """활동 안에서 회원이 맡은 역할."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    role: Literal["leader", "member"]
+    member: ActivityMemberSummary
+
+
 class ProjectResponse(BaseModel):
     """프로젝트 응답 스키마. 내부 id는 노출하지 않습니다."""
 
@@ -410,6 +458,10 @@ class ProjectResponse(BaseModel):
     category: str = Field(description="분류")
     created_at: datetime = Field(description="생성 시각")
     updated_at: datetime = Field(description="수정 시각")
+    memberships: List[ActivityMembershipResponse] = Field(
+        default_factory=list,
+        description="프로젝트장과 참여 회원",
+    )
 
 
 class ProjectListResponse(BaseModel):

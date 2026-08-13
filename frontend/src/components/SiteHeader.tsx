@@ -4,6 +4,7 @@ import { getAccessToken } from "../api/auth";
 
 const PUBLIC_LINKS = [
   { to: "/about", label: "소개" },
+  { to: "/members", label: "멤버" },
   { to: "/projects", label: "프로젝트" },
   { to: "/studies", label: "스터디" },
   { to: "/notices", label: "공지" },

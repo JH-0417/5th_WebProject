@@ -5,6 +5,7 @@
  * - 잘못된 필드명을 쓰면 편집 전에 에러를 잡을 수 있고
  * - 백엔드 JSON 구조와 프론트를 맞춰 두기 쉽습니다.
  */
+import type { ClubPosition, SystemRole } from "./members";
 
 /** POST /auth/login 요청 body */
 export type LoginRequest = {
@@ -60,7 +61,8 @@ export type MeResponse = {
   grade: number;
   phone_number: string;
   email: string;
-  role: string;
+  system_role: SystemRole;
+  club_position: ClubPosition;
   is_approved: boolean;
   join_status: string;
   github_username?: string | null;

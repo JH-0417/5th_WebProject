@@ -81,6 +81,28 @@ export function ActivityDetailPage({ kind }: ActivityDetailPageProps) {
               <h2>기술 스택 / 주제</h2>
               <p>{item.tech_stack || "등록된 내용이 없습니다."}</p>
             </section>
+
+            <section className="activity-detail-section">
+              <h2>{kind === "projects" ? "프로젝트 팀" : "스터디 멤버"}</h2>
+              {item.memberships.length > 0 ? (
+                <ul className="activity-member-list">
+                  {item.memberships.map((membership) => (
+                    <li key={membership.member.public_id}>
+                      <strong>{membership.member.name}</strong>
+                      <span>
+                        {membership.role === "leader"
+                          ? kind === "projects"
+                            ? "프로젝트장"
+                            : "스터디장"
+                          : "멤버"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="muted">등록된 멤버가 없습니다.</p>
+              )}
+            </section>
           </>
         ) : null}
 

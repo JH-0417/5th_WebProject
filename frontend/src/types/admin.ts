@@ -2,6 +2,10 @@
  * 관리자 API 관련 타입 (MemberAdminResponse 와 맞춤)
  */
 
+import type { ClubPosition, SystemRole } from "./members";
+
+export type { ClubPosition, SystemRole } from "./members";
+
 export type AdminMember = {
   public_id: string;
   name: string;
@@ -9,7 +13,8 @@ export type AdminMember = {
   department: string;
   grade: number;
   email: string;
-  role: string;
+  system_role: SystemRole;
+  club_position: ClubPosition;
   is_approved: boolean;
   join_status: string; // pending / approved / rejected
   apply_reason: string;
@@ -25,6 +30,11 @@ export type AdminMemberListResponse = {
 };
 
 export type AdminJoinActionResponse = {
+  message: string;
+  member: AdminMember;
+};
+
+export type AdminRoleActionResponse = {
   message: string;
   member: AdminMember;
 };
