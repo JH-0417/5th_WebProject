@@ -11,3 +11,9 @@ export type FaqListResponse = {
   total: number;
   items: Faq[];
 };
+
+/** POST /admin/faqs 요청 */
+export type FaqCreateRequest = {
+  question: string;
+  answer: string;
+};
