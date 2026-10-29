@@ -6,12 +6,18 @@
 OAuth2, 권한 검사는 이후 이슈에서 다룹니다.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from database import get_db
 from dependencies import get_current_member
+from login_throttle import (
+    check_login_allowed,
+    clear_login_failures,
+    get_client_ip,
+    record_login_failure,
+)
 from models import MemberDB
 from schemas import MemberLoginRequest, MemberSignupRequest
 from security import create_access_token, hash_password, verify_password
@@ -113,7 +119,11 @@ def signup(payload: MemberSignupRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/login")
-def login(payload: MemberLoginRequest, db: Session = Depends(get_db)):
+def login(
+    payload: MemberLoginRequest,
+    request: Request,
+    db: Session = Depends(get_db),
+):
     """
     로그인 API.
 
@@ -122,7 +132,12 @@ def login(payload: MemberLoginRequest, db: Session = Depends(get_db)):
     2) verify_password()로 입력한 평문 비밀번호와 DB의 해시값 비교
     3) is_approved=False 이면 403 Forbidden (관리자 승인 전 로그인 차단)
     4) 성공 시 JWT Access Token 발급 후 반환 / 실패 시 401 Unauthorized 반환
+
+    같은 아이디·IP에서 실패가 반복되면 login_throttle 규칙에 따라 429를 반환합니다.
     """
+
+    client_ip = get_client_ip(request)
+    check_login_allowed(payload.login_id, client_ip)
 
     # 1) login_id로 회원 조회
     member = (
@@ -133,10 +148,13 @@ def login(payload: MemberLoginRequest, db: Session = Depends(get_db)):
     # 두 실패 케이스(아이디 없음 / 비밀번호 틀림)를 동일한 401 + 동일한 메시지로 처리해서
     # "이 아이디는 존재하지 않는다" 같은 정보가 응답을 통해 유출되지 않도록 함
     if not member or not verify_password(payload.password, member.hashed_password):
+        record_login_failure(payload.login_id, client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="아이디 또는 비밀번호가 올바르지 않습니다.",
         )
+
+    clear_login_failures(payload.login_id)
 
     # 3) 관리자 승인 전 / 탈락 회원은 로그인 불가
     if member.join_status == "rejected":
