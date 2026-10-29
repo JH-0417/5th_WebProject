@@ -66,7 +66,7 @@ def update_member(db: Session, public_id: str, updates: dict) -> Optional[Member
     public_id로 회원을 찾아 전달된 필드만 부분 수정합니다.
 
     updates는 exclude_unset=True로 만든 dict여야 합니다.
-    is_approved가 포함되면 join_status를 함께 동기화합니다.
+    is_approved가 포함되면 join_status로 변환해 저장합니다. (is_approved는 계산 속성)
     회원이 없으면 None을 반환합니다.
     (unique 충돌 시 IntegrityError는 호출부인 라우터에서 409로 변환합니다.)
     """
@@ -75,8 +75,7 @@ def update_member(db: Session, public_id: str, updates: dict) -> Optional[Member
         return None
 
     if "is_approved" in updates:
-        approved = bool(updates["is_approved"])
-        updates["is_approved"] = approved
+        approved = bool(updates.pop("is_approved"))
         updates["join_status"] = "approved" if approved else "pending"
 
     for field, value in updates.items():
@@ -93,7 +92,7 @@ def set_member_join_status(
     join_status: str,
 ) -> Optional[MemberDB]:
     """
-    회원의 가입 심사 상태(join_status)를 변경하고 is_approved를 동기화합니다.
+    회원의 가입 심사 상태(join_status)를 변경합니다. is_approved는 여기서 자동 계산됩니다.
 
     join_status: pending / approved / rejected
     """
@@ -102,7 +101,6 @@ def set_member_join_status(
         return None
 
     member.join_status = join_status
-    member.is_approved = join_status == "approved"
     db.commit()
     db.refresh(member)
     return member

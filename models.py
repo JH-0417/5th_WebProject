@@ -56,7 +56,6 @@ class MemberDB(Base):
         ),
         default="member",
     )  # 동아리 직책
-    is_approved: Mapped[bool] = mapped_column(default=False)  # 가입 승인 여부 (join_status=approved 와 동기화)
     join_status: Mapped[str] = mapped_column(
         Enum("pending", "approved", "rejected", name="member_join_status"),
         default="pending",
@@ -64,6 +63,11 @@ class MemberDB(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)  # 이메일
     apply_reason: Mapped[str] = mapped_column(Text, default="")  # 지원 사유
     desired_activity: Mapped[str] = mapped_column(Text, default="")  # 동아리에서 해보고 싶은 활동
+
+    @property
+    def is_approved(self) -> bool:
+        """가입 승인 여부. join_status 한 곳에만 저장하고 여기서 계산합니다."""
+        return self.join_status == "approved"
 
     #선택 입력
     github_username: Mapped[Optional[str]] = mapped_column(String(39))  # GitHub 사용자명 # 사진도 포함?
@@ -123,10 +127,12 @@ class ActivityMembershipDB(Base):
     activity_id: Mapped[int] = mapped_column(
         ForeignKey("projects.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     member_id: Mapped[int] = mapped_column(
         ForeignKey("members.id", ondelete="CASCADE"),
         nullable=False,
+        index=True,
     )
     role: Mapped[str] = mapped_column(
         Enum("leader", "member", name="activity_membership_role"),

@@ -128,7 +128,7 @@ def approve_member(
     """
     가입 신청 승인 API.
 
-    join_status=approved, is_approved=True 로 변경합니다.
+    join_status=approved 로 변경합니다. (is_approved는 자동으로 True)
     """
     member = set_member_join_status(db, public_id, "approved")
     if member is None:
@@ -151,7 +151,7 @@ def reject_member(
     """
     가입 신청 탈락 API.
 
-    join_status=rejected, is_approved=False 로 변경합니다.
+    join_status=rejected 로 변경합니다. (is_approved는 자동으로 False)
     계정은 삭제하지 않고 유지합니다 (로그인 불가).
     """
     member = set_member_join_status(db, public_id, "rejected")
@@ -190,7 +190,7 @@ def change_member_system_role(
             detail="해당 회원을 찾을 수 없습니다.",
         )
 
-    if target.join_status != "approved" or not target.is_approved:
+    if not target.is_approved:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="승인된 회원의 역할만 변경할 수 있습니다.",
@@ -242,7 +242,7 @@ def change_member_club_position(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="해당 회원을 찾을 수 없습니다.",
         )
-    if target.join_status != "approved" or not target.is_approved:
+    if not target.is_approved:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="승인된 회원의 직책만 변경할 수 있습니다.",

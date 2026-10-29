@@ -235,7 +235,7 @@ class MemberUpdateRequest(BaseModel):
     - 제외: name, department, grade, system_role, club_position, github_username, bio, tech_stack
     모든 필드는 Optional이며, 요청에 포함된 필드만 업데이트합니다.
     권한·직책 변경은 전용 API를 사용합니다.
-    is_approved 변경 시 join_status도 함께 동기화됩니다.
+    is_approved 변경 시 join_status(approved / pending)로 변환해 저장합니다.
     승인/탈락은 전용 API(/approve, /reject) 사용을 권장합니다.
     """
 

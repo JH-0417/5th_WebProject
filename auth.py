@@ -64,7 +64,7 @@ def signup(payload: MemberSignupRequest, db: Session = Depends(get_db)):
     processed_password = hash_password(payload.password)
 
     # 4) DB 모델로 변환 후 저장
-    # 가입 신청 = Member 생성. join_status=pending, is_approved=False
+    # 가입 신청 = Member 생성. join_status=pending (is_approved는 join_status에서 계산)
     new_member = MemberDB(
         login_id=payload.login_id,
         hashed_password=processed_password,
@@ -77,7 +77,6 @@ def signup(payload: MemberSignupRequest, db: Session = Depends(get_db)):
         apply_reason=payload.apply_reason,
         desired_activity=payload.desired_activity,
         join_status="pending",
-        is_approved=False,
     )
 
     db.add(new_member)
@@ -162,7 +161,7 @@ def login(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="가입 신청이 탈락 처리되었습니다.",
         )
-    if not member.is_approved or member.join_status != "approved":
+    if not member.is_approved:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="관리자 승인 대기 중입니다. 승인 후 로그인할 수 있습니다.",
