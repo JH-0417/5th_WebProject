@@ -19,6 +19,7 @@ from sqlalchemy.exc import IntegrityError
 
 from crud import get_member_by_public_id, get_members, update_member, update_member_password
 from database import get_db
+from pagination import PageParams, page_params
 from dependencies import get_current_member
 from models import MemberDB
 from schemas import (
@@ -169,6 +170,7 @@ def list_members(
         default=None,
         description="동아리 직책 필터",
     ),
+    page: PageParams = Depends(page_params),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(_optional_bearer),
     db: Session = Depends(get_db),
 ) -> Union[MemberListResponse, MemberPublicListResponse]:
@@ -185,28 +187,30 @@ def list_members(
       - 로그인:   전체 회원 조회 가능, student_id 완전 노출
     """
     if _is_logged_in(credentials, db):
-        members = get_members(
+        result = get_members(
             db,
             name=name,
             system_role=system_role,
             club_position=club_position,
             join_status="approved",
+            page=page,
         )
         return {
-            "total": len(members),
-            "items": [MemberResponse.model_validate(m).model_dump() for m in members],
+            "total": result.total,
+            "items": [MemberResponse.model_validate(m).model_dump() for m in result.items],
         }
-    members = get_members(
+    result = get_members(
         db,
         name=name,
         system_role=system_role,
         club_position=club_position,
         club_positions=_PUBLIC_POSITIONS,
         join_status="approved",
+        page=page,
     )
     return {
-        "total": len(members),
-        "items": [_to_public(m) for m in members],
+        "total": result.total,
+        "items": [_to_public(m) for m in result.items],
     }
 
 

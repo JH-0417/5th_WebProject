@@ -56,6 +56,7 @@ from crud import (
 )
 from database import get_db
 from dependencies import require_admin, require_owner
+from pagination import PageParams, page_params
 from models import MemberDB
 from schemas import (
     ContactListResponse,
@@ -147,6 +148,7 @@ def list_admin_members(
         description="가입 심사 상태 필터 (pending / approved / rejected)",
     ),
     current_member: MemberDB = Depends(require_admin),
+    page: PageParams = Depends(page_params),
     db: Session = Depends(get_db),
 ):
     """
@@ -161,10 +163,10 @@ def list_admin_members(
             detail="join_status는 pending, approved, rejected 중 하나여야 합니다.",
         )
 
-    members = get_members(db, join_status=join_status)
+    result = get_members(db, join_status=join_status, page=page)
     return {
-        "total": len(members),
-        "items": [MemberAdminResponse.model_validate(m) for m in members],
+        "total": result.total,
+        "items": [MemberAdminResponse.model_validate(m) for m in result.items],
     }
 
 
@@ -622,7 +624,10 @@ def create_admin_notice(
     - require_admin()으로 관리자만 접근 가능합니다.
     - is_pinned는 create_notice()에서 False로 고정합니다.
     """
-    notice = create_notice(db, payload.model_dump())
+    notice = create_notice(
+        db,
+        {**payload.model_dump(), "created_by_id": current_member.id, "updated_by_id": current_member.id},
+    )
     return NoticeResponse.model_validate(notice)
 
 
@@ -640,7 +645,10 @@ def patch_admin_notice(
     - 전달된 필드만 수정합니다 (exclude_unset=True).
     - 존재하지 않으면 404를 반환합니다.
     """
-    notice = update_notice(db, public_id, payload.model_dump(exclude_unset=True))
+    updates = payload.model_dump(exclude_unset=True)
+    if updates:
+        updates["updated_by_id"] = current_member.id
+    notice = update_notice(db, public_id, updates)
     if notice is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -982,7 +990,10 @@ def create_admin_faq(
     - question과 answer를 함께 등록합니다.
     - sort_order를 생략하면 맨 아래 순서로 추가합니다.
     """
-    faq = create_faq(db, payload.model_dump())
+    faq = create_faq(
+        db,
+        {**payload.model_dump(), "created_by_id": current_member.id, "updated_by_id": current_member.id},
+    )
     return FaqResponse.model_validate(faq)
 
 
@@ -1000,6 +1011,8 @@ def update_admin_faq(
     - 존재하지 않으면 404를 반환합니다.
     """
     updates = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if v is not None}
+    if updates:
+        updates["updated_by_id"] = current_member.id
     faq = update_faq(db, public_id, updates)
     if faq is None:
         raise HTTPException(
@@ -1039,6 +1052,7 @@ def list_admin_contacts(
         default=None,
         description="처리 여부 필터 (true: 처리 완료, false: 미처리, 생략: 전체)",
     ),
+    page: PageParams = Depends(page_params),
     current_member: MemberDB = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
@@ -1048,10 +1062,10 @@ def list_admin_contacts(
     - require_admin()으로 관리자만 접근 가능합니다.
     - 최신 문의부터 반환합니다.
     """
-    inquiries = get_contact_inquiries(db, is_resolved=is_resolved)
+    result = get_contact_inquiries(db, is_resolved=is_resolved, page=page)
     return {
-        "total": len(inquiries),
-        "items": [ContactResponse.model_validate(i) for i in inquiries],
+        "total": result.total,
+        "items": [ContactResponse.model_validate(i) for i in result.items],
     }
 
 

@@ -10,22 +10,26 @@ from sqlalchemy.orm import Session
 
 from crud import get_notice_by_public_id, get_notices
 from database import get_db
+from pagination import PageParams, page_params
 from schemas import NoticeListResponse, NoticeResponse
 
 router = APIRouter(prefix="/notices", tags=["공지사항"])
 
 
 @router.get("", response_model=NoticeListResponse)
-def list_notices(db: Session = Depends(get_db)):
+def list_notices(
+    page: PageParams = Depends(page_params),
+    db: Session = Depends(get_db),
+):
     """
     공지사항 목록 조회 API (Public).
 
     최신 등록 순(created_at 내림차순)으로 반환합니다.
     """
-    notices = get_notices(db)
+    result = get_notices(db, page=page)
     return {
-        "total": len(notices),
-        "items": [NoticeResponse.model_validate(n) for n in notices],
+        "total": result.total,
+        "items": [NoticeResponse.model_validate(n) for n in result.items],
     }
 
 

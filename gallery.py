@@ -21,6 +21,7 @@ from crud import (
     get_gallery_by_public_id,
 )
 from database import get_db
+from pagination import PageParams, page_params
 from schemas import (
     GalleryAlbumDetailResponse,
     GalleryAlbumListResponse,
@@ -35,6 +36,7 @@ router = APIRouter(prefix="/gallery", tags=["갤러리"])
 @router.get("", response_model=GalleryListResponse)
 def list_galleries(
     album: Optional[str] = Query(default=None, description="앨범 public_id로 필터링 (선택)"),
+    page: PageParams = Depends(page_params),
     db: Session = Depends(get_db),
 ):
     """
@@ -53,24 +55,27 @@ def list_galleries(
             )
         album_id = found.id
 
-    galleries = get_galleries(db, album_id=album_id)
+    result = get_galleries(db, album_id=album_id, page=page)
     return {
-        "total": len(galleries),
-        "items": [GalleryResponse.model_validate(g) for g in galleries],
+        "total": result.total,
+        "items": [GalleryResponse.model_validate(g) for g in result.items],
     }
 
 
 @router.get("/albums", response_model=GalleryAlbumListResponse)
-def list_gallery_albums(db: Session = Depends(get_db)):
+def list_gallery_albums(
+    page: PageParams = Depends(page_params),
+    db: Session = Depends(get_db),
+):
     """
     앨범 목록 조회 API (Public).
 
     행사 날짜 최신순으로, 사진 수와 대표 이미지를 함께 반환합니다.
     """
-    albums = get_gallery_albums(db)
+    result = get_gallery_albums(db, page=page)
     return {
-        "total": len(albums),
-        "items": [GalleryAlbumResponse.model_validate(a) for a in albums],
+        "total": result.total,
+        "items": [GalleryAlbumResponse.model_validate(a) for a in result.items],
     }
 
 

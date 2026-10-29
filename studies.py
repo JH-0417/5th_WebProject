@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from crud import get_studies, get_study_by_public_id
 from database import get_db
+from pagination import PageParams, page_params
 from schemas import StudyListResponse, StudyResponse
 
 router = APIRouter(prefix="/studies", tags=["스터디"])
@@ -23,6 +24,7 @@ def list_studies(
         default=None,
         description="true: 모집 중인 스터디만, false: 모집 마감만, 생략: 전체",
     ),
+    page: PageParams = Depends(page_params),
     db: Session = Depends(get_db),
 ):
     """
@@ -31,10 +33,10 @@ def list_studies(
     category=study 인 항목만 반환합니다.
     모임 일정·장소·모집 여부(meeting_schedule, location, is_recruiting)를 함께 반환합니다.
     """
-    studies = get_studies(db, is_recruiting=recruiting)
+    result = get_studies(db, is_recruiting=recruiting, page=page)
     return {
-        "total": len(studies),
-        "items": [StudyResponse.model_validate(s) for s in studies],
+        "total": result.total,
+        "items": [StudyResponse.model_validate(s) for s in result.items],
     }
 
 

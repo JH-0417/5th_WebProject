@@ -11,22 +11,26 @@ from sqlalchemy.orm import Session
 
 from crud import get_project_by_public_id, get_projects
 from database import get_db
+from pagination import PageParams, page_params
 from schemas import ProjectListResponse, ProjectResponse
 
 router = APIRouter(prefix="/projects", tags=["프로젝트"])
 
 
 @router.get("", response_model=ProjectListResponse)
-def list_projects(db: Session = Depends(get_db)):
+def list_projects(
+    page: PageParams = Depends(page_params),
+    db: Session = Depends(get_db),
+):
     """
     프로젝트 목록 조회 API (Public).
 
     category=project 인 항목만 반환합니다.
     """
-    projects = get_projects(db)
+    result = get_projects(db, page=page)
     return {
-        "total": len(projects),
-        "items": [ProjectResponse.model_validate(p) for p in projects],
+        "total": result.total,
+        "items": [ProjectResponse.model_validate(p) for p in result.items],
     }
 
 

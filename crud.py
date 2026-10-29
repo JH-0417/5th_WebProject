@@ -6,11 +6,13 @@ DB 조회(Read) 로직을 모아두는 CRUD 모듈.
 수정하지 않아도 됩니다.
 """
 
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from pagination import Page, PageParams, paginate
 from models import (
     ActivityMembershipDB,
     ContactInquiryDB,
@@ -21,6 +23,7 @@ from models import (
     NoticeDB,
     ProjectDB,
     RecruitmentSettingDB,
+    RefreshTokenDB,
 )
 
 
@@ -31,7 +34,8 @@ def get_members(
     club_position: Optional[str] = None,
     club_positions: Optional[List[str]] = None,
     join_status: Optional[str] = None,
-) -> List[MemberDB]:
+    page: Optional[PageParams] = None,
+) -> Page:
     """
     회원 목록을 반환합니다.
 
@@ -52,7 +56,7 @@ def get_members(
         query = query.filter(MemberDB.club_position.in_(club_positions))
     if join_status is not None:
         query = query.filter(MemberDB.join_status == join_status)
-    return query.order_by(MemberDB.id).all()
+    return paginate(query.order_by(MemberDB.id), page)
 
 
 def get_member_by_public_id(db: Session, public_id: str) -> Optional[MemberDB]:
@@ -192,6 +196,8 @@ def update_member_password(
     평문 비밀번호는 받지 않으며, 호출부에서 hash_password()로 해싱한 값만 전달합니다.
     """
     member.hashed_password = hashed_password
+    # 비밀번호가 바뀌면 다른 기기에 남아 있는 로그인 유지 토큰을 모두 폐기합니다.
+    _revoke_member_refresh_tokens(db, member.id)
     db.commit()
     db.refresh(member)
     return member
@@ -201,22 +207,22 @@ def update_member_password(
 # 실제 DB 쓰기는 _*_project_row 내부 함수에만 두고,
 # create/update/delete_project|study 래퍼가 category를 고정·검증합니다.
 
-def get_projects(db: Session) -> List[ProjectDB]:
+def get_projects(db: Session, page: Optional[PageParams] = None) -> Page:
     """category=project 인 목록을 id 오름차순으로 반환합니다."""
-    return (
-        db.query(ProjectDB)
-        .filter(ProjectDB.category == "project")
-        .order_by(ProjectDB.id)
-        .all()
-    )
+    query = db.query(ProjectDB).filter(ProjectDB.category == "project").order_by(ProjectDB.id)
+    return paginate(query, page)
 
 
-def get_studies(db: Session, is_recruiting: Optional[bool] = None) -> List[ProjectDB]:
+def get_studies(
+    db: Session,
+    is_recruiting: Optional[bool] = None,
+    page: Optional[PageParams] = None,
+) -> Page:
     """category=study 인 목록을 id 오름차순으로 반환합니다. is_recruiting으로 모집 여부 필터링."""
     query = db.query(ProjectDB).filter(ProjectDB.category == "study")
     if is_recruiting is not None:
         query = query.filter(ProjectDB.is_recruiting == is_recruiting)
-    return query.order_by(ProjectDB.id).all()
+    return paginate(query.order_by(ProjectDB.id), page)
 
 
 def get_project_by_public_id(db: Session, public_id: str) -> Optional[ProjectDB]:
@@ -366,9 +372,9 @@ def delete_study(db: Session, public_id: str) -> Optional[ProjectDB]:
 
 # ─── 공지사항 CRUD ─────────────────────────────────────────────────────────────
 
-def get_notices(db: Session) -> List[NoticeDB]:
+def get_notices(db: Session, page: Optional[PageParams] = None) -> Page:
     """공지사항 목록을 created_at 내림차순으로 반환합니다."""
-    return db.query(NoticeDB).order_by(NoticeDB.created_at.desc()).all()
+    return paginate(db.query(NoticeDB).order_by(NoticeDB.created_at.desc(), NoticeDB.id.desc()), page)
 
 
 def get_notice_by_public_id(db: Session, public_id: str) -> Optional[NoticeDB]:
@@ -438,12 +444,16 @@ def get_calendar_events(db: Session) -> List[NoticeDB]:
 
 # ─── 갤러리 CRUD ─────────────────────────────────────────────────────────────
 
-def get_galleries(db: Session, album_id: Optional[int] = None) -> List[GalleryDB]:
+def get_galleries(
+    db: Session,
+    album_id: Optional[int] = None,
+    page: Optional[PageParams] = None,
+) -> Page:
     """갤러리 목록을 created_at 내림차순(최신순)으로 반환합니다. album_id로 앨범별 필터링."""
     query = db.query(GalleryDB)
     if album_id is not None:
         query = query.filter(GalleryDB.album_id == album_id)
-    return query.order_by(GalleryDB.created_at.desc(), GalleryDB.id.desc()).all()
+    return paginate(query.order_by(GalleryDB.created_at.desc(), GalleryDB.id.desc()), page)
 
 
 def get_gallery_by_public_id(db: Session, public_id: str) -> Optional[GalleryDB]:
@@ -496,17 +506,14 @@ def delete_gallery(db: Session, public_id: str) -> Optional[GalleryDB]:
 
 # ─── 갤러리 앨범 CRUD ─────────────────────────────────────────────────────────
 
-def get_gallery_albums(db: Session) -> List[GalleryAlbumDB]:
+def get_gallery_albums(db: Session, page: Optional[PageParams] = None) -> Page:
     """앨범 목록을 행사 날짜 최신순으로 반환합니다. 날짜가 없는 앨범은 뒤로, 같으면 최근 생성순."""
-    return (
-        db.query(GalleryAlbumDB)
-        .order_by(
-            GalleryAlbumDB.event_date.is_(None),
-            GalleryAlbumDB.event_date.desc(),
-            GalleryAlbumDB.id.desc(),
-        )
-        .all()
+    query = db.query(GalleryAlbumDB).order_by(
+        GalleryAlbumDB.event_date.is_(None),
+        GalleryAlbumDB.event_date.desc(),
+        GalleryAlbumDB.id.desc(),
     )
+    return paginate(query, page)
 
 
 def get_gallery_album_by_public_id(db: Session, public_id: str) -> Optional[GalleryAlbumDB]:
@@ -615,12 +622,13 @@ def create_contact_inquiry(db: Session, data: dict) -> ContactInquiryDB:
 def get_contact_inquiries(
     db: Session,
     is_resolved: Optional[bool] = None,
-) -> List[ContactInquiryDB]:
+    page: Optional[PageParams] = None,
+) -> Page:
     """문의 목록을 최신순으로 반환합니다. is_resolved로 처리 여부를 걸러낼 수 있습니다."""
     query = db.query(ContactInquiryDB)
     if is_resolved is not None:
         query = query.filter(ContactInquiryDB.is_resolved == is_resolved)
-    return query.order_by(ContactInquiryDB.created_at.desc(), ContactInquiryDB.id.desc()).all()
+    return paginate(query.order_by(ContactInquiryDB.created_at.desc(), ContactInquiryDB.id.desc()), page)
 
 
 def get_contact_inquiry_by_public_id(db: Session, public_id: str) -> Optional[ContactInquiryDB]:
@@ -679,3 +687,42 @@ def update_recruitment_setting(db: Session, updates: dict) -> RecruitmentSetting
     db.commit()
     db.refresh(setting)
     return setting
+
+
+# ─── 로그인 유지 (Refresh Token) ──────────────────────────────────────────
+
+def create_refresh_token(db: Session, member_id: int, token_hash: str, expires_at) -> RefreshTokenDB:
+    """Refresh Token(해시)을 저장합니다."""
+    token = RefreshTokenDB(member_id=member_id, token_hash=token_hash, expires_at=expires_at)
+    db.add(token)
+    db.commit()
+    db.refresh(token)
+    return token
+
+
+def get_refresh_token_by_hash(db: Session, token_hash: str) -> Optional[RefreshTokenDB]:
+    """해시로 Refresh Token을 조회합니다. 없으면 None."""
+    return db.query(RefreshTokenDB).filter(RefreshTokenDB.token_hash == token_hash).first()
+
+
+def revoke_refresh_token(db: Session, token: RefreshTokenDB) -> None:
+    """Refresh Token 하나를 폐기합니다."""
+    if token.revoked_at is None:
+        token.revoked_at = datetime.now(timezone.utc)
+        db.commit()
+
+
+def _revoke_member_refresh_tokens(db: Session, member_id: int) -> None:
+    """회원의 아직 유효한 Refresh Token을 모두 폐기 표시합니다. (commit은 호출부에서)"""
+    now = datetime.now(timezone.utc)
+    (
+        db.query(RefreshTokenDB)
+        .filter(RefreshTokenDB.member_id == member_id, RefreshTokenDB.revoked_at.is_(None))
+        .update({RefreshTokenDB.revoked_at: now}, synchronize_session=False)
+    )
+
+
+def revoke_all_refresh_tokens(db: Session, member_id: int) -> None:
+    """회원의 모든 Refresh Token을 폐기합니다. (모든 기기 로그아웃)"""
+    _revoke_member_refresh_tokens(db, member_id)
+    db.commit()
