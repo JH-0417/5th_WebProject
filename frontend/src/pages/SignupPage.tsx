@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { signup } from "../api/auth";
+import { useRecruitment } from "../utils/useRecruitmentOpen";
 
 /**
  * 가입 신청 페이지 컴포넌트
@@ -12,6 +13,8 @@ import { signup } from "../api/auth";
 export function SignupPage() {
   // 페이지 이동용 훅. 예: navigate("/login")
   const navigate = useNavigate();
+  // 모집 상태 (null = 불러오는 중/실패 → 폼은 보여 주고 서버가 최종 판단)
+  const recruitment = useRecruitment();
 
   // --- 폼 입력값 (useState = 값이 바뀌면 화면이 다시 그려짐) ---
   const [loginId, setLoginId] = useState("");
@@ -75,8 +78,18 @@ export function SignupPage() {
           있습니다.
         </p>
 
-        {/* 성공 후에는 폼 대신 결과 박스를 보여 줌 */}
-        {successMessage ? (
+        {recruitment?.message ? (
+          <p className="recruitment-notice">{recruitment.message}</p>
+        ) : null}
+
+        {/* 모집 기간이 아니면 폼 대신 안내, 성공 후에는 결과 박스를 보여 줌 */}
+        {recruitment?.is_open === false && !successMessage ? (
+          <div className="result-box">
+            <p className="error">
+              지금은 모집 기간이 아닙니다. 모집이 시작되면 다시 지원해 주세요.
+            </p>
+          </div>
+        ) : successMessage ? (
           <div className="result-box">
             <p className="success">{successMessage}</p>
             {/* navigate: JS로 /login URL 로 이동 */}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { clearAccessToken, fetchMe } from "../api/auth";
+import { RecruitmentToggle } from "../components/RecruitmentToggle";
 import type { MeResponse } from "../types/auth";
 
 /**
@@ -119,6 +120,8 @@ export function HomePage() {
             </div>
           </dl>
         ) : null}
+
+        {me?.system_role === "admin" ? <RecruitmentToggle /> : null}
 
         <div className="button-row">
           {me?.system_role === "admin" ? (

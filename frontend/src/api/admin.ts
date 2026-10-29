@@ -20,6 +20,10 @@ import type {
 } from "../types/activities";
 import type { GalleryItem } from "../types/gallery";
 import type { Faq, FaqCreateRequest } from "../types/faqs";
+import type {
+  Recruitment,
+  RecruitmentUpdateRequest,
+} from "../types/recruitment";
 
 /**
  * 관리자 API 모음
@@ -265,4 +269,15 @@ export function deleteFaq(publicId: string): Promise<{ message: string }> {
       headers: authHeaders(),
     },
   );
+}
+
+/** PATCH /admin/recruitment — 모집 열기·닫기, 안내 문구 변경 */
+export function updateRecruitment(
+  payload: RecruitmentUpdateRequest,
+): Promise<Recruitment> {
+  return apiRequest<Recruitment>("/admin/recruitment", {
+    method: "PATCH",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
 }

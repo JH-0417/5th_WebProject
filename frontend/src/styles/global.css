@@ -2749,3 +2749,114 @@ button[type="submit"]:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── 모집(지원하기) 상태 ───────────────────────────────────── */
+
+.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.recruitment-notice {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.recruitment-toggle {
+  display: grid;
+  gap: 14px;
+  margin: 24px 0;
+  padding: 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #f9fafb;
+}
+
+.recruitment-toggle-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.recruitment-toggle h2 {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+
+.recruitment-toggle .muted {
+  margin: 0;
+}
+
+.recruitment-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  width: auto;
+  padding: 6px 6px 6px 14px;
+  border: none;
+  border-radius: 999px;
+  background: #d1d5db;
+  color: #374151;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.recruitment-switch.is-on {
+  background: #16a34a;
+  color: #fff;
+}
+
+.recruitment-switch:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.recruitment-switch-knob {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+}
+
+.recruitment-message-form {
+  display: grid;
+  gap: 6px;
+}
+
+.recruitment-message-form label {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.recruitment-message-row {
+  display: flex;
+  gap: 8px;
+}
+
+.recruitment-message-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.recruitment-message-row button {
+  flex-shrink: 0;
+  width: auto;
+}
+
+@media (max-width: 480px) {
+  .recruitment-toggle-header,
+  .recruitment-message-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

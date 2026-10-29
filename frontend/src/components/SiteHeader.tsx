@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import { getAccessToken } from "../api/auth";
+import { useRecruitment } from "../utils/useRecruitmentOpen";
 
 const NAV_GROUPS = [
   {
@@ -37,6 +38,8 @@ export function SiteHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const loggedIn = Boolean(getAccessToken());
+  const recruitment = useRecruitment();
+  const recruitmentClosed = recruitment?.is_open === false;
 
   useEffect(() => {
     setMenuOpen(false);
@@ -129,9 +132,11 @@ export function SiteHeader() {
                 <Link to="/login" className="site-login-link">
                   로그인
                 </Link>
-                <Link to="/signup" className="site-signup-link">
-                  가입 신청
-                </Link>
+                {recruitmentClosed ? null : (
+                  <Link to="/signup" className="site-signup-link">
+                    가입 신청
+                  </Link>
+                )}
               </>
             )}
           </div>

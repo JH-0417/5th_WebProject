@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { getAccessToken } from "../api/auth";
 import heroImage from "../assets/hero.png";
+import { useRecruitment } from "../utils/useRecruitmentOpen";
 
 const ACTIVITIES = [
   "스터디 활동",
@@ -86,6 +87,9 @@ function SocialIcon({ name }: { name: SocialIconName }) {
 /** 누구나 접근할 수 있는 메인 랜딩 페이지 */
 export function LandingPage() {
   const loggedIn = Boolean(getAccessToken());
+  const recruitment = useRecruitment();
+  // 불러오기 전(null)에는 기존처럼 지원 링크를 보여 주고, 닫힘이 확인되면 마감 표시
+  const recruitmentClosed = recruitment?.is_open === false;
 
   return (
     <main className="landing">
@@ -105,12 +109,18 @@ export function LandingPage() {
               아이디어를 현실로 만드는 개발자들의 커뮤니티.
             </p>
             <div className="landing-actions">
-              <Link
-                to={loggedIn ? "/mypage" : "/signup"}
-                className="landing-primary-action"
-              >
-                {loggedIn ? "마이페이지" : "동아리 지원하기"}
-              </Link>
+              {!loggedIn && recruitmentClosed ? (
+                <span className="landing-primary-action is-disabled" aria-disabled="true">
+                  지금은 모집 기간이 아닙니다
+                </span>
+              ) : (
+                <Link
+                  to={loggedIn ? "/mypage" : "/signup"}
+                  className="landing-primary-action"
+                >
+                  {loggedIn ? "마이페이지" : "동아리 지원하기"}
+                </Link>
+              )}
               <Link to="/about" className="landing-secondary-action">
                 더 알아보기
               </Link>
@@ -204,12 +214,18 @@ export function LandingPage() {
             지금 우리의 여정에 합류하세요.
           </p>
           <div className="landing-actions">
-            <Link
-              to={loggedIn ? "/mypage" : "/signup"}
-              className="landing-primary-action"
-            >
-              {loggedIn ? "마이페이지 이동" : "지원하기"}
-            </Link>
+            {!loggedIn && recruitmentClosed ? (
+              <span className="landing-primary-action is-disabled" aria-disabled="true">
+                모집 마감
+              </span>
+            ) : (
+              <Link
+                to={loggedIn ? "/mypage" : "/signup"}
+                className="landing-primary-action"
+              >
+                {loggedIn ? "마이페이지 이동" : "지원하기"}
+              </Link>
+            )}
             <Link to="/projects" className="landing-dark-action">
               프로젝트 보기
             </Link>

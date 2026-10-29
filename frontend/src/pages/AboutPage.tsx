@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useRecruitment } from "../utils/useRecruitmentOpen";
 
 const VALUES = [
   {
@@ -25,6 +26,9 @@ const HISTORY = [
 
 /** 동아리 소개와 CI를 안내하는 공개 페이지 */
 export function AboutPage() {
+  const recruitment = useRecruitment();
+  const recruitmentClosed = recruitment?.is_open === false;
+
   return (
     <main className="about-page">
       <section className="about-hero">
@@ -40,7 +44,13 @@ export function AboutPage() {
             소속 IT 동아리입니다.
           </span>
           <div className="about-actions">
-            <Link to="/signup">동아리 지원하기</Link>
+            {recruitmentClosed ? (
+              <span className="is-disabled" aria-disabled="true">
+                모집 기간이 아닙니다
+              </span>
+            ) : (
+              <Link to="/signup">동아리 지원하기</Link>
+            )}
             <Link to="/projects">프로젝트 보기</Link>
           </div>
         </div>

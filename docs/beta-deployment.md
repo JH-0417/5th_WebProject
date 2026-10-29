@@ -40,7 +40,7 @@ Render 시작 시 `alembic upgrade head`가 실행되어 최신 스키마가 적
 `SECRET_KEY`는 Blueprint가 안전한 임의 값으로 생성합니다. 배포 후 Render URL의
 루트와 `/docs`가 열리는지 확인합니다.
 
-## 3. Vercel 프론트엔드
+## 3. Vercel 프론트엔드 
 
 1. Vercel에서 GitHub 저장소를 Import합니다.
 2. **Root Directory**를 `frontend`로 지정합니다.
