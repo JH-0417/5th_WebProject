@@ -15,6 +15,7 @@ from models import (
     ActivityMembershipDB,
     ContactInquiryDB,
     FaqDB,
+    GalleryAlbumDB,
     GalleryDB,
     MemberDB,
     NoticeDB,
@@ -425,9 +426,12 @@ def get_calendar_events(db: Session) -> List[NoticeDB]:
 
 # ─── 갤러리 CRUD ─────────────────────────────────────────────────────────────
 
-def get_galleries(db: Session) -> List[GalleryDB]:
-    """갤러리 목록을 created_at 내림차순(최신순)으로 반환합니다."""
-    return db.query(GalleryDB).order_by(GalleryDB.created_at.desc()).all()
+def get_galleries(db: Session, album_id: Optional[int] = None) -> List[GalleryDB]:
+    """갤러리 목록을 created_at 내림차순(최신순)으로 반환합니다. album_id로 앨범별 필터링."""
+    query = db.query(GalleryDB)
+    if album_id is not None:
+        query = query.filter(GalleryDB.album_id == album_id)
+    return query.order_by(GalleryDB.created_at.desc(), GalleryDB.id.desc()).all()
 
 
 def get_gallery_by_public_id(db: Session, public_id: str) -> Optional[GalleryDB]:
@@ -476,6 +480,64 @@ def delete_gallery(db: Session, public_id: str) -> Optional[GalleryDB]:
     db.delete(gallery)
     db.commit()
     return gallery
+
+
+# ─── 갤러리 앨범 CRUD ─────────────────────────────────────────────────────────
+
+def get_gallery_albums(db: Session) -> List[GalleryAlbumDB]:
+    """앨범 목록을 행사 날짜 최신순으로 반환합니다. 날짜가 없는 앨범은 뒤로, 같으면 최근 생성순."""
+    return (
+        db.query(GalleryAlbumDB)
+        .order_by(
+            GalleryAlbumDB.event_date.is_(None),
+            GalleryAlbumDB.event_date.desc(),
+            GalleryAlbumDB.id.desc(),
+        )
+        .all()
+    )
+
+
+def get_gallery_album_by_public_id(db: Session, public_id: str) -> Optional[GalleryAlbumDB]:
+    """public_id로 앨범 단건을 조회합니다. 없으면 None."""
+    return db.query(GalleryAlbumDB).filter(GalleryAlbumDB.public_id == public_id).first()
+
+
+def create_gallery_album(db: Session, data: dict) -> GalleryAlbumDB:
+    """앨범을 생성합니다."""
+    album = GalleryAlbumDB(**data)
+    db.add(album)
+    db.commit()
+    db.refresh(album)
+    return album
+
+
+def update_gallery_album(db: Session, public_id: str, updates: dict) -> Optional[GalleryAlbumDB]:
+    """public_id로 앨범을 찾아 전달된 필드만 수정합니다. 없으면 None."""
+    album = get_gallery_album_by_public_id(db, public_id)
+    if album is None:
+        return None
+    for field, value in updates.items():
+        setattr(album, field, value)
+    db.commit()
+    db.refresh(album)
+    return album
+
+
+def delete_gallery_album(db: Session, public_id: str) -> Optional[GalleryAlbumDB]:
+    """
+    앨범을 삭제합니다. 없으면 None.
+
+    앨범에 있던 사진은 지우지 않고 앨범 연결만 비웁니다.
+    (사진까지 지울지는 호출부인 라우터에서 결정합니다.)
+    """
+    album = get_gallery_album_by_public_id(db, public_id)
+    if album is None:
+        return None
+    for photo in album.photos:
+        photo.album_id = None
+    db.delete(album)
+    db.commit()
+    return album
 
 
 # ─── FAQ CRUD ────────────────────────────────────────────────────────────────

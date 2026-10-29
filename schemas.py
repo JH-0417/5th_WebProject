@@ -7,7 +7,7 @@
   - ORM 객체를 스키마로 변환할 때는 model_config = ConfigDict(from_attributes=True)를 사용합니다.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
@@ -671,6 +671,7 @@ class GalleryCreateRequest(BaseModel):
         description="사진 설명 (선택)",
         examples=["2026 MT 단체 사진"],
     )
+    album_public_id: Optional[str] = Field(default=None, description="넣을 앨범의 public_id (선택)")
 
 
 class GalleryUpdateRequest(BaseModel):
@@ -688,6 +689,10 @@ class GalleryUpdateRequest(BaseModel):
         description="사진 설명",
         examples=["2026 MT 단체 사진 (수정)"],
     )
+    album_public_id: Optional[str] = Field(
+        default=None,
+        description="옮길 앨범의 public_id. null을 보내면 앨범에서 뺍니다.",
+    )
 
 
 class GalleryResponse(BaseModel):
@@ -698,6 +703,7 @@ class GalleryResponse(BaseModel):
     public_id: str = Field(description="공개 식별자 (UUID)")
     image_url: str = Field(description="활동 사진 URL")
     caption: Optional[str] = Field(default=None, description="사진 설명")
+    album_public_id: Optional[str] = Field(default=None, description="속한 앨범의 public_id (없으면 null)")
     created_at: datetime = Field(description="등록 시각")
     updated_at: datetime = Field(description="수정 시각")
 
@@ -707,6 +713,59 @@ class GalleryListResponse(BaseModel):
 
     total: int = Field(description="전체 사진 수")
     items: List[GalleryResponse] = Field(description="갤러리 사진 목록")
+
+
+class GalleryBulkUploadResponse(BaseModel):
+    """여러 장 업로드 결과 응답 스키마."""
+
+    total: int = Field(description="업로드된 사진 수")
+    items: List[GalleryResponse] = Field(description="업로드된 사진 목록")
+
+
+# ─── 갤러리 앨범 스키마 ─────────────────────────────────────────────────────
+
+class GalleryAlbumCreateRequest(BaseModel):
+    """앨범 생성 요청 스키마."""
+
+    title: str = Field(..., min_length=1, max_length=100, description="앨범 제목", examples=["2026 여름 MT"])
+    description: Optional[str] = Field(default=None, description="앨범 설명 (선택)")
+    event_date: Optional[date] = Field(default=None, description="행사 날짜 (선택)", examples=["2026-07-15"])
+
+
+class GalleryAlbumUpdateRequest(BaseModel):
+    """앨범 부분 수정 요청 스키마. 보낸 필드만 수정합니다."""
+
+    title: Optional[str] = Field(default=None, min_length=1, max_length=100, description="앨범 제목")
+    description: Optional[str] = Field(default=None, description="앨범 설명")
+    event_date: Optional[date] = Field(default=None, description="행사 날짜")
+
+
+class GalleryAlbumResponse(BaseModel):
+    """앨범 목록용 응답 스키마. 사진 목록 대신 사진 수와 대표 이미지만 포함합니다."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str = Field(description="공개 식별자 (UUID)")
+    title: str = Field(description="앨범 제목")
+    description: Optional[str] = Field(default=None, description="앨범 설명")
+    event_date: Optional[date] = Field(default=None, description="행사 날짜")
+    photo_count: int = Field(description="앨범 사진 수")
+    cover_image_url: Optional[str] = Field(default=None, description="대표 이미지 URL (첫 사진)")
+    created_at: datetime = Field(description="생성 시각")
+    updated_at: datetime = Field(description="수정 시각")
+
+
+class GalleryAlbumDetailResponse(GalleryAlbumResponse):
+    """앨범 상세 응답 스키마. 앨범 사진 전체를 포함합니다."""
+
+    photos: List[GalleryResponse] = Field(description="앨범 사진 목록 (올린 순서)")
+
+
+class GalleryAlbumListResponse(BaseModel):
+    """앨범 목록 응답 스키마."""
+
+    total: int = Field(description="전체 앨범 수")
+    items: List[GalleryAlbumResponse] = Field(description="앨범 목록 (행사 날짜 최신순)")
 
 
 # ─── FAQ 스키마 ───────────────────────────────────────────────────────────────

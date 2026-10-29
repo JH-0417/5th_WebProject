@@ -1,9 +1,10 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     Enum,
     ForeignKey,
@@ -178,6 +179,42 @@ class NoticeDB(Base):
 
 # ─── 갤러리 ───────────────────────────────────────────────────────────
 
+class GalleryAlbumDB(Base):
+    """행사(MT, 발표회 등) 단위로 갤러리 사진을 묶는 앨범."""
+
+    __tablename__ = "gallery_albums"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, default=generate_uuid)
+    title: Mapped[str] = mapped_column(String(100))
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    event_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)  # 행사 날짜
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+        server_default=func.now(),
+    )
+    photos: Mapped[List["GalleryDB"]] = relationship(
+        back_populates="album",
+        order_by="GalleryDB.id",
+    )
+
+    @property
+    def photo_count(self) -> int:
+        return len(self.photos)
+
+    @property
+    def cover_image_url(self) -> Optional[str]:
+        """앨범 대표 이미지: 가장 먼저 올린 사진."""
+        return self.photos[0].image_url if self.photos else None
+
+
 class GalleryDB(Base):
     __tablename__ = "gallery"
 
@@ -191,6 +228,13 @@ class GalleryDB(Base):
         ForeignKey("members.id", ondelete="SET NULL"),
         nullable=True,
     )
+    # 앨범이 삭제되어도 사진은 남기고 앨범 연결만 비웁니다.
+    album_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("gallery_albums.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,
@@ -202,6 +246,11 @@ class GalleryDB(Base):
         onupdate=utc_now,
         server_default=func.now(),
     )
+    album: Mapped[Optional["GalleryAlbumDB"]] = relationship(back_populates="photos")
+
+    @property
+    def album_public_id(self) -> Optional[str]:
+        return self.album.public_id if self.album else None
 
 
 # ─── FAQ ───────────────────────────────────────────────────────────────

@@ -7,7 +7,7 @@ require_admin 의존성을 사용하여 관리자 권한을 검사합니다.
 - role이 "admin" → 200 OK
 """
 
-from typing import Optional
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.exc import IntegrityError
@@ -20,15 +20,18 @@ from crud import (
     set_contact_inquiry_resolved,
     create_faq,
     create_gallery,
+    create_gallery_album,
     create_notice,
     create_project,
     create_study,
     delete_faq,
     delete_gallery,
+    delete_gallery_album,
     delete_member,
     delete_notice,
     delete_project,
     delete_study,
+    get_gallery_album_by_public_id,
     get_gallery_by_public_id,
     get_member_by_public_id,
     get_members,
@@ -38,6 +41,7 @@ from crud import (
     set_member_system_role,
     update_faq,
     update_gallery,
+    update_gallery_album,
     update_member,
     update_member_password,
     update_notice,
@@ -55,6 +59,10 @@ from schemas import (
     FaqCreateRequest,
     FaqResponse,
     FaqUpdateRequest,
+    GalleryAlbumCreateRequest,
+    GalleryAlbumResponse,
+    GalleryAlbumUpdateRequest,
+    GalleryBulkUploadResponse,
     GalleryCreateRequest,
     GalleryResponse,
     GalleryUpdateRequest,
@@ -586,6 +594,22 @@ def remove_admin_notice(
 
 # ─── 갤러리 관리 ─────────────────────────────────────────────────────────────
 
+MAX_BULK_UPLOAD_FILES = 20
+
+
+def _resolve_album_id(db: Session, album_public_id: Optional[str]) -> Optional[int]:
+    """앨범 public_id를 내부 id로 바꿉니다. None이면 None, 없는 앨범이면 404."""
+    if album_public_id is None:
+        return None
+    album = get_gallery_album_by_public_id(db, album_public_id)
+    if album is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 앨범을 찾을 수 없습니다.",
+        )
+    return album.id
+
+
 @router.post(
     "/gallery/upload",
     response_model=GalleryResponse,
@@ -594,6 +618,7 @@ def remove_admin_notice(
 async def upload_admin_gallery(
     file: UploadFile = File(..., description="업로드할 활동 사진 (jpg/png/webp/gif, 8MB 이하)"),
     caption: Optional[str] = Form(default=None, description="사진 설명 (선택)"),
+    album_public_id: Optional[str] = Form(default=None, description="넣을 앨범의 public_id (선택)"),
     current_member: MemberDB = Depends(require_admin),
     db: Session = Depends(get_db),
 ):
@@ -604,13 +629,14 @@ async def upload_admin_gallery(
     - 파일을 Cloudinary에 업로드한 뒤 반환 URL을 DB에 저장합니다.
     - uploaded_by는 현재 로그인한 admin의 id로 서버에서 설정합니다.
     """
+    album_id = _resolve_album_id(db, album_public_id)
     file_bytes = await file.read()
     validate_gallery_image(file.content_type, len(file_bytes))
     image_url = upload_gallery_image(file_bytes)
 
     gallery = create_gallery(
         db,
-        {"image_url": image_url, "caption": caption},
+        {"image_url": image_url, "caption": caption, "album_id": album_id},
         uploaded_by=current_member.id,
     )
     return GalleryResponse.model_validate(gallery)
@@ -632,7 +658,9 @@ def create_admin_gallery(
     - 파일 업로드는 POST /admin/gallery/upload 를 사용하세요.
     - uploaded_by는 현재 로그인한 admin의 id로 서버에서 설정합니다.
     """
-    gallery = create_gallery(db, payload.model_dump(), uploaded_by=current_member.id)
+    data = payload.model_dump()
+    data["album_id"] = _resolve_album_id(db, data.pop("album_public_id"))
+    gallery = create_gallery(db, data, uploaded_by=current_member.id)
     return GalleryResponse.model_validate(gallery)
 
 
@@ -676,9 +704,13 @@ def patch_admin_gallery(
 
     - require_admin()으로 관리자만 접근 가능합니다.
     - 전달된 필드만 수정합니다 (exclude_unset=True).
+    - album_public_id로 다른 앨범으로 옮기거나, null로 앨범에서 뺄 수 있습니다.
     - 존재하지 않으면 404를 반환합니다.
     """
-    gallery = update_gallery(db, public_id, payload.model_dump(exclude_unset=True))
+    updates = payload.model_dump(exclude_unset=True)
+    if "album_public_id" in updates:
+        updates["album_id"] = _resolve_album_id(db, updates.pop("album_public_id"))
+    gallery = update_gallery(db, public_id, updates)
     if gallery is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -710,6 +742,146 @@ def remove_admin_gallery(
     delete_gallery_image(gallery.image_url)
     delete_gallery(db, public_id)
     return {"message": "갤러리 사진이 삭제되었습니다."}
+
+
+# ─── 갤러리 앨범 관리 ────────────────────────────────────────────────────────
+
+@router.post(
+    "/gallery/albums",
+    response_model=GalleryAlbumResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_admin_gallery_album(
+    payload: GalleryAlbumCreateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """관리자용 앨범 생성 API. 사진은 POST /admin/gallery/albums/{public_id}/photos 로 올립니다."""
+    album = create_gallery_album(db, payload.model_dump())
+    return GalleryAlbumResponse.model_validate(album)
+
+
+@router.patch("/gallery/albums/{public_id}", response_model=GalleryAlbumResponse)
+def update_admin_gallery_album(
+    public_id: str,
+    payload: GalleryAlbumUpdateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 앨범 수정 API.
+
+    - 보낸 필드만 수정합니다. title은 null로 지울 수 없습니다.
+    - 존재하지 않으면 404를 반환합니다.
+    """
+    updates = payload.model_dump(exclude_unset=True)
+    if updates.get("title", "") is None:
+        updates.pop("title")
+    album = update_gallery_album(db, public_id, updates)
+    if album is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 앨범을 찾을 수 없습니다.",
+        )
+    return GalleryAlbumResponse.model_validate(album)
+
+
+@router.post(
+    "/gallery/albums/{public_id}/photos",
+    response_model=GalleryBulkUploadResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+async def upload_admin_gallery_album_photos(
+    public_id: str,
+    files: List[UploadFile] = File(
+        ...,
+        description=f"앨범에 올릴 사진들 (한 번에 최대 {MAX_BULK_UPLOAD_FILES}장, 장당 8MB 이하)",
+    ),
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 앨범 사진 여러 장 업로드 API.
+
+    - 모든 파일을 먼저 검사하고, 하나라도 형식·크기가 맞지 않으면 아무것도 올리지 않습니다.
+    - Cloudinary 업로드 중 실패하면 이번 요청에서 이미 올린 이미지를 지우고 오류를 반환합니다.
+    """
+    album = get_gallery_album_by_public_id(db, public_id)
+    if album is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 앨범을 찾을 수 없습니다.",
+        )
+    if len(files) > MAX_BULK_UPLOAD_FILES:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"한 번에 최대 {MAX_BULK_UPLOAD_FILES}장까지 올릴 수 있습니다.",
+        )
+
+    contents = []
+    for file in files:
+        file_bytes = await file.read()
+        validate_gallery_image(file.content_type, len(file_bytes))
+        contents.append(file_bytes)
+
+    uploaded_urls: List[str] = []
+    try:
+        for file_bytes in contents:
+            uploaded_urls.append(upload_gallery_image(file_bytes))
+    except HTTPException:
+        for url in uploaded_urls:
+            delete_gallery_image(url)
+        raise
+
+    photos = [
+        create_gallery(
+            db,
+            {"image_url": url, "caption": None, "album_id": album.id},
+            uploaded_by=current_member.id,
+        )
+        for url in uploaded_urls
+    ]
+    return {
+        "total": len(photos),
+        "items": [GalleryResponse.model_validate(p) for p in photos],
+    }
+
+
+@router.delete("/gallery/albums/{public_id}")
+def remove_admin_gallery_album(
+    public_id: str,
+    delete_photos: bool = Query(
+        default=False,
+        description="true면 앨범 사진도 모두 삭제, false(기본)면 사진은 남기고 앨범에서만 뺌",
+    ),
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 앨범 삭제 API.
+
+    - 기본값은 사진을 남기고 앨범만 삭제합니다.
+    - delete_photos=true 이면 앨범 사진과 Cloudinary 이미지도 함께 삭제합니다.
+    """
+    album = get_gallery_album_by_public_id(db, public_id)
+    if album is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 앨범을 찾을 수 없습니다.",
+        )
+
+    deleted_photo_count = 0
+    if delete_photos:
+        for photo in list(album.photos):
+            delete_gallery_image(photo.image_url)
+            delete_gallery(db, photo.public_id)
+            deleted_photo_count += 1
+
+    delete_gallery_album(db, public_id)
+    return {
+        "message": "앨범이 삭제되었습니다.",
+        "deleted_photo_count": deleted_photo_count,
+    }
 
 
 # ─── FAQ 관리 ────────────────────────────────────────────────────────────────
