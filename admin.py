@@ -32,6 +32,7 @@ from crud import (
     get_gallery_by_public_id,
     get_member_by_public_id,
     get_members,
+    get_recruitment_setting,
     set_member_join_status,
     set_member_club_position,
     set_member_system_role,
@@ -40,6 +41,7 @@ from crud import (
     update_member_password,
     update_notice,
     update_project,
+    update_recruitment_setting,
     update_study,
 )
 from database import get_db
@@ -69,6 +71,8 @@ from schemas import (
     ProjectCreateRequest,
     ProjectResponse,
     ProjectUpdateRequest,
+    RecruitmentResponse,
+    RecruitmentUpdateRequest,
     StudyCreateRequest,
     StudyResponse,
     StudyUpdateRequest,
@@ -815,3 +819,34 @@ def remove_admin_contact(
             detail="해당 문의를 찾을 수 없습니다.",
         )
     return {"message": "문의가 삭제되었습니다."}
+
+
+# ─── 모집 관리 ───────────────────────────────────────────────────────────────
+
+@router.get("/recruitment", response_model=RecruitmentResponse)
+def get_admin_recruitment(
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """관리자용 모집 상태 조회 API."""
+    return RecruitmentResponse.model_validate(get_recruitment_setting(db))
+
+
+@router.patch("/recruitment", response_model=RecruitmentResponse)
+def update_admin_recruitment(
+    payload: RecruitmentUpdateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 모집 열기·닫기 API.
+
+    - is_open=true 로 열어야만 회원가입(가입 신청)을 받습니다.
+    - message 로 모집 안내 문구를 함께 바꿀 수 있습니다. (빈 문자열이면 지움)
+    - 보낸 필드만 수정합니다.
+    """
+    updates = payload.model_dump(exclude_unset=True)
+    if updates.get("is_open") is None:
+        updates.pop("is_open", None)
+    setting = update_recruitment_setting(db, updates)
+    return RecruitmentResponse.model_validate(setting)

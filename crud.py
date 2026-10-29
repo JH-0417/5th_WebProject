@@ -18,6 +18,7 @@ from models import (
     MemberDB,
     NoticeDB,
     ProjectDB,
+    RecruitmentSettingDB,
 )
 
 
@@ -558,3 +559,31 @@ def delete_contact_inquiry(db: Session, public_id: str) -> Optional[ContactInqui
     db.delete(inquiry)
     db.commit()
     return inquiry
+
+
+# ─── 모집 설정 ───────────────────────────────────────────────────────────
+
+RECRUITMENT_SETTING_ID = 1
+
+
+def get_recruitment_setting(db: Session) -> RecruitmentSettingDB:
+    """모집 설정(단일 행)을 반환합니다. 아직 없으면 '닫힘' 상태로 만들어 반환합니다."""
+    setting = db.get(RecruitmentSettingDB, RECRUITMENT_SETTING_ID)
+    if setting is None:
+        setting = RecruitmentSettingDB(id=RECRUITMENT_SETTING_ID, is_open=False)
+        db.add(setting)
+        db.commit()
+        db.refresh(setting)
+    return setting
+
+
+def update_recruitment_setting(db: Session, updates: dict) -> RecruitmentSettingDB:
+    """모집 설정을 부분 수정합니다. message가 빈 문자열이면 None으로 지웁니다."""
+    setting = get_recruitment_setting(db)
+    if "message" in updates:
+        updates["message"] = (updates["message"] or "").strip() or None
+    for field, value in updates.items():
+        setattr(setting, field, value)
+    db.commit()
+    db.refresh(setting)
+    return setting

@@ -14,6 +14,7 @@ from gallery import router as gallery_router
 from members import router as members_router
 from notices import router as notices_router
 from projects import router as projects_router
+from recruitment import router as recruitment_router
 from studies import router as studies_router
 
 # DB 스키마는 Alembic 마이그레이션으로 관리합니다.
@@ -62,6 +63,7 @@ app.include_router(calendar_router)
 app.include_router(gallery_router)
 app.include_router(faqs_router)
 app.include_router(contacts_router)
+app.include_router(recruitment_router)
 app.include_router(admin_router)
 
 

@@ -239,3 +239,25 @@ class ContactInquiryDB(Base):
         default=utc_now,
         server_default=func.now(),
     )
+
+
+# ─── 모집 설정 ───────────────────────────────────────────────────────────
+
+class RecruitmentSettingDB(Base):
+    """
+    동아리 모집(가입 신청) 열림 여부. 항상 id=1 한 행만 사용합니다.
+
+    관리자가 is_open=True 로 열었을 때만 회원가입(가입 신청)을 받습니다.
+    """
+
+    __tablename__ = "recruitment_settings"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    is_open: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    message: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)  # 모집 안내 문구 (예: "2학기 신입 모집 ~9/15")
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+        server_default=func.now(),
+    )

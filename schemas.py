@@ -800,3 +800,25 @@ class ContactUpdateRequest(BaseModel):
 
     is_resolved: bool = Field(..., description="처리 완료 여부")
 
+# ─── 모집 설정 ───────────────────────────────────────────────────────────
+
+class RecruitmentResponse(BaseModel):
+    """모집 상태 응답 스키마. 지원하기 버튼 노출 여부 판단에 사용합니다."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    is_open: bool = Field(description="모집(가입 신청) 진행 중 여부")
+    message: Optional[str] = Field(default=None, description="모집 안내 문구")
+    updated_at: datetime = Field(description="마지막 변경 시각")
+
+
+class RecruitmentUpdateRequest(BaseModel):
+    """관리자용 모집 상태 변경 요청 스키마. 보낸 필드만 수정합니다."""
+
+    is_open: Optional[bool] = Field(default=None, description="모집 열기(true) / 닫기(false)")
+    message: Optional[str] = Field(
+        default=None,
+        max_length=200,
+        description="모집 안내 문구 (빈 문자열이면 지움)",
+        examples=["2026 2학기 신입 부원 모집 중 (~9/15)"],
+    )

@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from crud import get_recruitment_setting
 from database import get_db
 from dependencies import get_current_member
 from login_throttle import (
@@ -31,12 +32,20 @@ def signup(payload: MemberSignupRequest, db: Session = Depends(get_db)):
     회원가입 API.
 
     처리 순서:
+    0) 관리자가 모집을 열어둔 상태인지 확인 (닫혀 있으면 403)
     1) login_id 중복 확인
     2) student_id 중복 확인
     3) 비밀번호 처리 (security.hash_password를 통해 bcrypt로 해싱)
     4) MemberDB로 변환해서 저장
     5) 생성된 회원 정보 반환 (비밀번호 관련 값은 응답에서 제외)
     """
+
+    # 0) 모집 기간이 아니면 가입 신청을 받지 않음
+    if not get_recruitment_setting(db).is_open:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="지금은 모집 기간이 아닙니다. 모집이 시작되면 다시 지원해 주세요.",
+        )
 
     # 1) login_id 중복 확인
     existing_login_id = (
