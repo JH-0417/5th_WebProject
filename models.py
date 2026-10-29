@@ -213,9 +213,16 @@ class FaqDB(Base):
     public_id: Mapped[str] = mapped_column(String(36), unique=True, default=generate_uuid)
     question: Mapped[str] = mapped_column(String(200))
     answer: Mapped[str] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, server_default="0")  # 작을수록 위에 표시
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
         server_default=func.now(),
     )
 

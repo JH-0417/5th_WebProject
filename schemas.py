@@ -725,6 +725,19 @@ class FaqCreateRequest(BaseModel):
         description="질문에 대한 답변",
         examples=["모집 기간에 지원서를 제출하면 됩니다."],
     )
+    sort_order: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description="표시 순서 (작을수록 위). 생략하면 맨 아래에 추가",
+    )
+
+
+class FaqUpdateRequest(BaseModel):
+    """FAQ 수정 요청 스키마. 보낸 필드만 수정합니다."""
+
+    question: Optional[str] = Field(default=None, min_length=1, max_length=200, description="자주 묻는 질문")
+    answer: Optional[str] = Field(default=None, min_length=1, description="질문에 대한 답변")
+    sort_order: Optional[int] = Field(default=None, ge=0, description="표시 순서 (작을수록 위)")
 
 
 class FaqResponse(BaseModel):
@@ -735,7 +748,9 @@ class FaqResponse(BaseModel):
     public_id: str = Field(description="공개 식별자 (UUID)")
     question: str = Field(description="자주 묻는 질문")
     answer: str = Field(description="질문에 대한 답변")
+    sort_order: int = Field(description="표시 순서 (작을수록 위)")
     created_at: datetime = Field(description="등록 시각")
+    updated_at: datetime = Field(description="마지막 수정 시각")
 
 
 class FaqListResponse(BaseModel):

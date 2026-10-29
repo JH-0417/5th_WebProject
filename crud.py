@@ -8,6 +8,7 @@ DB 조회(Read) 로직을 모아두는 CRUD 모듈.
 
 from typing import List, Optional
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from models import (
@@ -480,8 +481,8 @@ def delete_gallery(db: Session, public_id: str) -> Optional[GalleryDB]:
 # ─── FAQ CRUD ────────────────────────────────────────────────────────────────
 
 def get_faqs(db: Session) -> List[FaqDB]:
-    """FAQ 목록을 id 오름차순으로 반환합니다."""
-    return db.query(FaqDB).order_by(FaqDB.id.asc()).all()
+    """FAQ 목록을 표시 순서(sort_order), 같으면 등록 순서(id)대로 반환합니다."""
+    return db.query(FaqDB).order_by(FaqDB.sort_order.asc(), FaqDB.id.asc()).all()
 
 
 def get_faq_by_public_id(db: Session, public_id: str) -> Optional[FaqDB]:
@@ -490,9 +491,26 @@ def get_faq_by_public_id(db: Session, public_id: str) -> Optional[FaqDB]:
 
 
 def create_faq(db: Session, data: dict) -> FaqDB:
-    """FAQ를 생성합니다."""
+    """FAQ를 생성합니다. sort_order가 없으면 맨 아래 순서로 넣습니다."""
+    if data.get("sort_order") is None:
+        max_order = db.query(func.max(FaqDB.sort_order)).scalar()
+        data = {**data, "sort_order": 0 if max_order is None else max_order + 1}
     faq = FaqDB(**data)
     db.add(faq)
+    db.commit()
+    db.refresh(faq)
+    return faq
+
+
+def update_faq(db: Session, public_id: str, updates: dict) -> Optional[FaqDB]:
+    """public_id로 FAQ를 찾아 전달된 필드만 수정합니다. 없으면 None."""
+    faq = get_faq_by_public_id(db, public_id)
+    if faq is None:
+        return None
+
+    for field, value in updates.items():
+        setattr(faq, field, value)
+
     db.commit()
     db.refresh(faq)
     return faq

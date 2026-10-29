@@ -36,6 +36,7 @@ from crud import (
     set_member_join_status,
     set_member_club_position,
     set_member_system_role,
+    update_faq,
     update_gallery,
     update_member,
     update_member_password,
@@ -53,6 +54,7 @@ from schemas import (
     ContactUpdateRequest,
     FaqCreateRequest,
     FaqResponse,
+    FaqUpdateRequest,
     GalleryCreateRequest,
     GalleryResponse,
     GalleryUpdateRequest,
@@ -727,8 +729,32 @@ def create_admin_faq(
 
     - require_admin()으로 관리자만 접근 가능합니다.
     - question과 answer를 함께 등록합니다.
+    - sort_order를 생략하면 맨 아래 순서로 추가합니다.
     """
     faq = create_faq(db, payload.model_dump())
+    return FaqResponse.model_validate(faq)
+
+
+@router.patch("/faqs/{public_id}", response_model=FaqResponse)
+def update_admin_faq(
+    public_id: str,
+    payload: FaqUpdateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 FAQ 수정 API.
+
+    - question, answer, sort_order 중 보낸 필드만 수정합니다.
+    - 존재하지 않으면 404를 반환합니다.
+    """
+    updates = {k: v for k, v in payload.model_dump(exclude_unset=True).items() if v is not None}
+    faq = update_faq(db, public_id, updates)
+    if faq is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 FAQ를 찾을 수 없습니다.",
+        )
     return FaqResponse.model_validate(faq)
 
 
