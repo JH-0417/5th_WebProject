@@ -67,7 +67,7 @@ from schemas import (
     StudyResponse,
     StudyUpdateRequest,
 )
-from security import TEMPORARY_PASSWORD, hash_password
+from security import generate_temporary_password, hash_password
 from storage import delete_gallery_image, upload_gallery_image, validate_gallery_image
 
 router = APIRouter(prefix="/admin", tags=["관리자"])
@@ -345,10 +345,11 @@ def reset_member_password(
     db: Session = Depends(get_db),
 ):
     """
-    관리자용 비밀번호 초기화 API (방식 A: 고정 임시 비밀번호).
+    관리자용 비밀번호 초기화 API.
 
     - require_admin()으로 관리자만 접근 가능합니다.
     - 회원이 없으면 404를 반환합니다.
+    - 대상 회원 한 명에게만 무작위 임시 비밀번호를 새로 발급합니다.
     - 임시 비밀번호는 BCrypt로 해싱해 저장하고, 평문은 응답에만 포함합니다.
     - 이메일 발송은 이번 Issue 범위에 포함하지 않습니다.
     """
@@ -359,10 +360,11 @@ def reset_member_password(
             detail="해당 회원을 찾을 수 없습니다.",
         )
 
-    update_member_password(db, member, hash_password(TEMPORARY_PASSWORD))
+    temporary_password = generate_temporary_password()
+    update_member_password(db, member, hash_password(temporary_password))
     return PasswordResetResponse(
         message="비밀번호가 임시 비밀번호로 초기화되었습니다.",
-        temporary_password=TEMPORARY_PASSWORD,
+        temporary_password=temporary_password,
         public_id=member.public_id,
     )
 

@@ -33,7 +33,6 @@ Render 시작 시 `alembic upgrade head`가 실행되어 최신 스키마가 적
 
 - `DATABASE_URL`: Neon 연결 문자열
 - `CORS_ORIGINS`: 우선 `https://example.vercel.app` 입력 후 실제 Vercel URL로 교체
-- `TEMPORARY_PASSWORD`: 관리자가 회원 비밀번호를 초기화할 때 사용할 임시 비밀번호
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_API_KEY`
 - `CLOUDINARY_API_SECRET`

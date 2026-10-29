@@ -341,7 +341,7 @@ class PasswordResetResponse(BaseModel):
     """관리자 비밀번호 초기화 성공 응답 스키마."""
 
     message: str = Field(description="처리 결과 메시지")
-    temporary_password: str = Field(description="고정 임시 비밀번호 (회원에게 안내)")
+    temporary_password: str = Field(description="이 회원에게만 새로 발급된 임시 비밀번호 (회원에게 안내)")
     public_id: str = Field(description="초기화된 회원의 public_id")
 
 

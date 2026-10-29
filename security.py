@@ -9,6 +9,8 @@ python-jose를 사용해 JWT Access Token을 생성합니다.
 """
 
 import os
+import secrets
+import string
 from datetime import datetime, timedelta, timezone
 
 import bcrypt
@@ -34,9 +36,22 @@ ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 # ACCESS_TOKEN_EXPIRE_MINUTES: Access Token 만료 시간(분).
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
 
-# 관리자 비밀번호 초기화(방식 A)에 사용하는 고정 임시 비밀번호.
-# 운영 환경에서는 반드시 별도 환경 변수로 설정합니다.
-TEMPORARY_PASSWORD = os.getenv("TEMPORARY_PASSWORD", "ChangeMe123!")
+# 관리자 비밀번호 초기화 시 발급하는 임시 비밀번호 길이 (회원가입 규칙: 8~64자).
+TEMPORARY_PASSWORD_LENGTH = 12
+_TEMPORARY_PASSWORD_CHARS = string.ascii_letters + string.digits
+
+
+def generate_temporary_password(length: int = TEMPORARY_PASSWORD_LENGTH) -> str:
+    """
+    회원 한 명에게만 쓰이는 무작위 임시 비밀번호를 생성합니다.
+
+    초기화할 때마다 새 값을 만들기 때문에, 한 회원의 임시 비밀번호로
+    다른 회원 계정에 로그인할 수 없습니다. 영문과 숫자를 최소 1자씩 포함합니다.
+    """
+    while True:
+        password = "".join(secrets.choice(_TEMPORARY_PASSWORD_CHARS) for _ in range(length))
+        if any(c.isalpha() for c in password) and any(c.isdigit() for c in password):
+            return password
 
 def hash_password(plain_password: str) -> str:
     """
