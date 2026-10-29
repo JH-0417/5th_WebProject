@@ -2,15 +2,24 @@
 인증(회원가입/로그인) 관련 API 라우터.
 
 회원가입(POST /auth/signup), 로그인(POST /auth/login)을 구현합니다.
-로그인 성공 시 JWT Access Token을 발급합니다.
+로그인 성공 시 JWT Access Token(짧은 만료)과 Refresh Token(긴 만료)을 발급합니다.
+Access Token이 만료되면 POST /auth/refresh 로 다시 로그인하지 않고 새 토큰을 받습니다.
 OAuth2, 권한 검사는 이후 이슈에서 다룹니다.
 """
+
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from crud import get_recruitment_setting
+from crud import (
+    create_refresh_token,
+    get_recruitment_setting,
+    get_refresh_token_by_hash,
+    revoke_all_refresh_tokens,
+    revoke_refresh_token,
+)
 from database import get_db
 from dependencies import get_current_member
 from login_throttle import (
@@ -20,10 +29,46 @@ from login_throttle import (
     record_login_failure,
 )
 from models import MemberDB
-from schemas import MemberLoginRequest, MemberSignupRequest
-from security import create_access_token, hash_password, verify_password
+from schemas import MemberLoginRequest, MemberSignupRequest, RefreshTokenRequest, TokenResponse
+from security import (
+    ACCESS_TOKEN_EXPIRE_MINUTES,
+    REFRESH_TOKEN_EXPIRE_DAYS,
+    create_access_token,
+    generate_refresh_token,
+    hash_password,
+    hash_refresh_token,
+    verify_password,
+)
 
 router = APIRouter(prefix="/auth", tags=["인증"])
+
+_INVALID_REFRESH = HTTPException(
+    status_code=status.HTTP_401_UNAUTHORIZED,
+    detail="로그인이 만료되었습니다. 다시 로그인해 주세요.",
+)
+
+
+def _as_utc(value: datetime) -> datetime:
+    """SQLite는 시간대 정보 없이 돌려주므로 UTC로 맞춰 비교합니다."""
+    return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+
+
+def _issue_tokens(db: Session, member: MemberDB) -> dict:
+    """Access Token과 새 Refresh Token을 함께 발급합니다."""
+    refresh_token = generate_refresh_token()
+    create_refresh_token(
+        db,
+        member_id=member.id,
+        token_hash=hash_refresh_token(refresh_token),
+        expires_at=datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+    )
+    return {
+        "access_token": create_access_token(login_id=member.login_id),
+        "token_type": "bearer",
+        "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        "refresh_token": refresh_token,
+        "refresh_expires_in": REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60,
+    }
 
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED)
@@ -126,7 +171,7 @@ def signup(payload: MemberSignupRequest, db: Session = Depends(get_db)):
     }
 
 
-@router.post("/login")
+@router.post("/login", response_model=TokenResponse)
 def login(
     payload: MemberLoginRequest,
     request: Request,
@@ -177,11 +222,59 @@ def login(
         )
 
     # 4) 로그인 성공: JWT Access Token 생성 후 반환
-    access_token = create_access_token(login_id=member.login_id)
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-    }
+    return _issue_tokens(db, member)
+
+
+@router.post("/refresh", response_model=TokenResponse)
+def refresh(payload: RefreshTokenRequest, db: Session = Depends(get_db)):
+    """
+    토큰 갱신 API.
+
+    Access Token이 만료되면 로그인 때 받은 refresh_token으로 새 토큰 한 쌍을 받습니다.
+    - 사용한 refresh_token은 즉시 폐기되고 새 refresh_token이 발급됩니다. (rotation)
+    - 이미 폐기된 refresh_token이 다시 들어오면 도난으로 보고 그 회원의 모든 로그인을 끊습니다.
+    - 만료·폐기·없는 토큰이거나, 승인이 취소된 회원이면 401을 반환합니다.
+    """
+    stored = get_refresh_token_by_hash(db, hash_refresh_token(payload.refresh_token))
+    if stored is None:
+        raise _INVALID_REFRESH
+    if stored.revoked_at is not None:
+        revoke_all_refresh_tokens(db, stored.member_id)
+        raise _INVALID_REFRESH
+    if _as_utc(stored.expires_at) <= datetime.now(timezone.utc):
+        revoke_refresh_token(db, stored)
+        raise _INVALID_REFRESH
+
+    member = stored.member
+    revoke_refresh_token(db, stored)
+    if member is None or not member.is_approved:
+        raise _INVALID_REFRESH
+    return _issue_tokens(db, member)
+
+
+@router.post("/logout")
+def logout(payload: RefreshTokenRequest, db: Session = Depends(get_db)):
+    """
+    로그아웃 API.
+
+    전달한 refresh_token을 폐기해 이 기기의 로그인 유지를 끝냅니다.
+    (Access Token은 남은 만료 시간 동안 유효하므로 프론트에서 함께 지워야 합니다.)
+    이미 폐기됐거나 없는 토큰이어도 같은 응답을 돌려줍니다.
+    """
+    stored = get_refresh_token_by_hash(db, hash_refresh_token(payload.refresh_token))
+    if stored is not None:
+        revoke_refresh_token(db, stored)
+    return {"message": "로그아웃되었습니다."}
+
+
+@router.post("/logout-all")
+def logout_all(
+    current_member: MemberDB = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    """모든 기기 로그아웃 API. 내 계정의 Refresh Token을 모두 폐기합니다."""
+    revoke_all_refresh_tokens(db, current_member.id)
+    return {"message": "모든 기기에서 로그아웃되었습니다."}
 
 
 @router.get("/me")

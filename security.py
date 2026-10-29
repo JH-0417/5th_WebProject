@@ -9,6 +9,7 @@ python-jose를 사용해 JWT Access Token을 생성합니다.
 """
 
 import os
+import hashlib
 import secrets
 import string
 from datetime import datetime, timedelta, timezone
@@ -35,6 +36,9 @@ ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
 
 # ACCESS_TOKEN_EXPIRE_MINUTES: Access Token 만료 시간(분).
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+
+# REFRESH_TOKEN_EXPIRE_DAYS: Refresh Token 만료 시간(일). 이 기간 동안 접속이 없으면 다시 로그인해야 합니다.
+REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "14"))
 
 # 관리자 비밀번호 초기화 시 발급하는 임시 비밀번호 길이 (회원가입 규칙: 8~64자).
 TEMPORARY_PASSWORD_LENGTH = 12
@@ -130,3 +134,13 @@ def decode_access_token(token: str) -> str:
         return login_id
     except JWTError:
         raise credentials_exception
+
+
+def generate_refresh_token() -> str:
+    """추측할 수 없는 무작위 Refresh Token 원문을 생성합니다. (DB에는 해시만 저장)"""
+    return secrets.token_urlsafe(48)
+
+
+def hash_refresh_token(token: str) -> str:
+    """Refresh Token 원문을 SHA-256 해시로 바꿉니다. 무작위 값이라 bcrypt 없이도 안전합니다."""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()

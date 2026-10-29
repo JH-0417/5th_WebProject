@@ -182,6 +182,27 @@ class NoticeDB(Base):
         onupdate=utc_now,
         server_default=func.now(),
     )
+    # 작성자·마지막 수정자. 회원이 삭제되어도 글은 남기고 작성자만 비웁니다.
+    created_by_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("members.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    updated_by_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("members.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_by: Mapped[Optional["MemberDB"]] = relationship(foreign_keys=[created_by_id])
+    updated_by: Mapped[Optional["MemberDB"]] = relationship(foreign_keys=[updated_by_id])
+
+    @property
+    def created_by_name(self) -> Optional[str]:
+        return self.created_by.name if self.created_by else None
+
+    @property
+    def updated_by_name(self) -> Optional[str]:
+        return self.updated_by.name if self.updated_by else None
 
 
 # ─── 갤러리 ───────────────────────────────────────────────────────────
@@ -281,6 +302,27 @@ class FaqDB(Base):
         onupdate=utc_now,
         server_default=func.now(),
     )
+    # 작성자·마지막 수정자. 회원이 삭제되어도 글은 남기고 작성자만 비웁니다.
+    created_by_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("members.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    updated_by_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("members.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_by: Mapped[Optional["MemberDB"]] = relationship(foreign_keys=[created_by_id])
+    updated_by: Mapped[Optional["MemberDB"]] = relationship(foreign_keys=[updated_by_id])
+
+    @property
+    def created_by_name(self) -> Optional[str]:
+        return self.created_by.name if self.created_by else None
+
+    @property
+    def updated_by_name(self) -> Optional[str]:
+        return self.updated_by.name if self.updated_by else None
 
 
 # ─── 문의 (Contact) ─────────────────────────────────────────────────────
@@ -324,3 +366,33 @@ class RecruitmentSettingDB(Base):
         onupdate=utc_now,
         server_default=func.now(),
     )
+
+
+# ─── 로그인 유지 (Refresh Token) ────────────────────────────────────────
+
+class RefreshTokenDB(Base):
+    """
+    로그인 유지용 Refresh Token.
+
+    토큰 원문은 저장하지 않고 SHA-256 해시만 저장합니다. (DB가 유출돼도 토큰을 쓸 수 없음)
+    한 번 사용한 토큰은 revoked_at을 채워 폐기하고 새 토큰을 발급합니다. (rotation)
+    """
+
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    member_id: Mapped[int] = mapped_column(
+        ForeignKey("members.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        server_default=func.now(),
+    )
+
+    member: Mapped["MemberDB"] = relationship()

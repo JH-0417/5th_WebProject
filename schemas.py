@@ -204,6 +204,22 @@ class MemberSystemRoleUpdateRequest(BaseModel):
     )
 
 
+class TokenResponse(BaseModel):
+    """로그인·토큰 갱신 응답 스키마."""
+
+    access_token: str = Field(description="API 호출용 Access Token (짧은 만료)")
+    token_type: str = Field(default="bearer", description="토큰 종류")
+    expires_in: int = Field(description="Access Token 만료까지 남은 초")
+    refresh_token: str = Field(description="Access Token 재발급용 Refresh Token (긴 만료, 한 번 쓰면 새로 발급)")
+    refresh_expires_in: int = Field(description="Refresh Token 만료까지 남은 초")
+
+
+class RefreshTokenRequest(BaseModel):
+    """토큰 갱신·로그아웃 요청 스키마."""
+
+    refresh_token: str = Field(..., min_length=1, description="로그인 때 받은 Refresh Token")
+
+
 class OwnerTransferRequest(BaseModel):
     """최고관리자 양도 요청 스키마."""
 
@@ -660,6 +676,8 @@ class NoticeResponse(BaseModel):
     location: Optional[str] = Field(default=None, description="행사 장소")
     created_at: datetime = Field(description="생성 시각")
     updated_at: datetime = Field(description="수정 시각")
+    created_by_name: Optional[str] = Field(default=None, description="작성자 이름 (탈퇴 시 null)")
+    updated_by_name: Optional[str] = Field(default=None, description="마지막 수정자 이름 (탈퇴 시 null)")
 
 
 class NoticeListResponse(BaseModel):
@@ -847,6 +865,8 @@ class FaqResponse(BaseModel):
     sort_order: int = Field(description="표시 순서 (작을수록 위)")
     created_at: datetime = Field(description="등록 시각")
     updated_at: datetime = Field(description="마지막 수정 시각")
+    created_by_name: Optional[str] = Field(default=None, description="작성자 이름 (탈퇴 시 null)")
+    updated_by_name: Optional[str] = Field(default=None, description="마지막 수정자 이름 (탈퇴 시 null)")
 
 
 class FaqListResponse(BaseModel):
