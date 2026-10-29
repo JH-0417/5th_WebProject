@@ -4,6 +4,7 @@ FastAPI 의존성(Dependency) 함수 모음.
 단일 책임 원칙에 따라 인증/권한 관련 의존성을 auth.py와 분리하여 관리합니다.
 - get_current_member : JWT 검증 후 승인된(is_approved=True) 회원의 DB 객체를 반환합니다.
 - require_admin      : get_current_member를 재사용하며, system_role이 "admin"이 아니면 403을 반환합니다.
+- require_owner      : require_admin을 재사용하며, 최고관리자(is_owner)가 아니면 403을 반환합니다.
 """
 
 from fastapi import Depends, HTTPException, status
@@ -65,5 +66,23 @@ def require_admin(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="관리자 권한이 필요합니다.",
+        )
+    return current_member
+
+
+def require_owner(
+    current_member: MemberDB = Depends(require_admin),
+) -> MemberDB:
+    """
+    최고관리자 권한 검사 의존성 함수.
+
+    관리자 임명·해제, 최고관리자 양도처럼 사이트 주인만 할 수 있는 작업에 사용합니다.
+    - 관리자가 아니면 require_admin()이 401/403을 반환합니다.
+    - 관리자이지만 최고관리자가 아니면 403을 반환합니다.
+    """
+    if not current_member.is_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="최고관리자만 할 수 있는 작업입니다.",
         )
     return current_member

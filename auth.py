@@ -204,6 +204,7 @@ def me(current_member: MemberDB = Depends(get_current_member)):
         "phone_number": current_member.phone_number,
         "email": current_member.email,
         "system_role": current_member.system_role,
+        "is_owner": current_member.is_owner,
         "club_position": current_member.club_position,
         "is_approved": current_member.is_approved,
         "join_status": current_member.join_status,

@@ -5,6 +5,10 @@ require_admin 의존성을 사용하여 관리자 권한을 검사합니다.
 - 비로그인(토큰 없음) → 401 Unauthorized
 - 로그인했으나 role이 "admin"이 아님 → 403 Forbidden
 - role이 "admin" → 200 OK
+
+관리자 임명·해제와 최고관리자 양도는 require_owner(최고관리자 전용)를 사용합니다.
+다른 관리자 계정의 가입 상태·정보·비밀번호는 최고관리자만 바꿀 수 있고,
+최고관리자 계정은 본인 외에는 아무도 바꿀 수 없습니다.
 """
 
 from typing import List, Optional
@@ -39,6 +43,7 @@ from crud import (
     set_member_join_status,
     set_member_club_position,
     set_member_system_role,
+    transfer_owner,
     update_faq,
     update_gallery,
     update_gallery_album,
@@ -50,7 +55,7 @@ from crud import (
     update_study,
 )
 from database import get_db
-from dependencies import require_admin
+from dependencies import require_admin, require_owner
 from models import MemberDB
 from schemas import (
     ContactListResponse,
@@ -74,6 +79,7 @@ from schemas import (
     MemberSystemRoleUpdateRequest,
     MemberResponse,
     MemberUpdateRequest,
+    OwnerTransferRequest,
     NoticeCreateRequest,
     NoticeResponse,
     NoticeUpdateRequest,
@@ -107,8 +113,31 @@ def admin_test(current_member: MemberDB = Depends(require_admin)):
         "message": "관리자 인증 성공",
         "admin": current_member.name,
         "system_role": current_member.system_role,
+        "is_owner": current_member.is_owner,
         "club_position": current_member.club_position,
     }
+
+
+def _guard_admin_target(db: Session, public_id: str, current_member: MemberDB) -> None:
+    """
+    관리자 계정 보호 규칙을 검사합니다. (회원이 없으면 그냥 통과해 호출부가 404 처리)
+
+    - 최고관리자 계정은 본인 외에는 변경할 수 없습니다.
+    - 다른 관리자 계정은 최고관리자만 변경할 수 있습니다.
+    """
+    target = get_member_by_public_id(db, public_id)
+    if target is None or target.id == current_member.id:
+        return
+    if target.is_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="최고관리자 계정은 다른 사람이 변경할 수 없습니다.",
+        )
+    if target.system_role == "admin" and not current_member.is_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="다른 관리자 계정은 최고관리자만 변경할 수 있습니다.",
+        )
 
 
 @router.get("/members", response_model=MemberAdminListResponse)
@@ -150,6 +179,7 @@ def approve_member(
 
     join_status=approved 로 변경합니다. (is_approved는 자동으로 True)
     """
+    _guard_admin_target(db, public_id, current_member)
     member = set_member_join_status(db, public_id, "approved")
     if member is None:
         raise HTTPException(
@@ -174,6 +204,7 @@ def reject_member(
     join_status=rejected 로 변경합니다. (is_approved는 자동으로 False)
     계정은 삭제하지 않고 유지합니다 (로그인 불가).
     """
+    _guard_admin_target(db, public_id, current_member)
     member = set_member_join_status(db, public_id, "rejected")
     if member is None:
         raise HTTPException(
@@ -193,13 +224,15 @@ def reject_member(
 def change_member_system_role(
     public_id: str,
     payload: MemberSystemRoleUpdateRequest,
-    current_member: MemberDB = Depends(require_admin),
+    current_member: MemberDB = Depends(require_owner),
     db: Session = Depends(get_db),
 ):
     """
-    관리자용 사이트 권한 변경 API.
+    관리자 임명·해제 API (최고관리자 전용).
 
+    - require_owner()로 최고관리자만 접근 가능합니다.
     - 승인된 회원의 권한만 member / admin으로 변경할 수 있습니다.
+    - 최고관리자 본인의 권한은 바꿀 수 없습니다. (먼저 양도하세요)
     - 관리자는 본인의 admin 권한을 스스로 내릴 수 없습니다.
     - 마지막 admin의 권한은 변경할 수 없습니다.
     """
@@ -222,10 +255,10 @@ def change_member_system_role(
             "member": MemberAdminResponse.model_validate(target),
         }
 
-    if target.id == current_member.id and payload.system_role != "admin":
+    if target.is_owner:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="본인의 admin 권한은 스스로 변경할 수 없습니다.",
+            detail="최고관리자의 권한은 바꿀 수 없습니다. 먼저 최고관리자를 양도하세요.",
         )
 
     if (
@@ -294,7 +327,9 @@ def patch_member(
     - 요청에 포함된 필드만 수정합니다. (Partial Update)
     - 빈 body면 변경 없이 기존 회원 정보를 반환합니다.
     - 회원이 없으면 404, unique 충돌이면 409를 반환합니다.
+    - 다른 관리자 계정은 최고관리자만 수정할 수 있습니다.
     """
+    _guard_admin_target(db, public_id, current_member)
     updates = payload.model_dump(exclude_unset=True)
 
     if not updates:
@@ -323,6 +358,42 @@ def patch_member(
         )
 
     return MemberResponse.model_validate(member)
+
+
+@router.post("/owner/transfer", response_model=MemberRoleActionResponse)
+def transfer_admin_owner(
+    payload: OwnerTransferRequest,
+    current_member: MemberDB = Depends(require_owner),
+    db: Session = Depends(get_db),
+):
+    """
+    최고관리자 양도 API (최고관리자 전용).
+
+    - 승인된 회원에게 최고관리자를 넘깁니다. 상대가 일반 회원이면 admin 권한도 함께 받습니다.
+    - 양도한 본인은 일반 admin으로 남습니다.
+    """
+    target = get_member_by_public_id(db, payload.public_id)
+    if target is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 회원을 찾을 수 없습니다.",
+        )
+    if target.id == current_member.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="이미 최고관리자입니다.",
+        )
+    if not target.is_approved:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="승인된 회원에게만 양도할 수 있습니다.",
+        )
+
+    new_owner = transfer_owner(db, current_member, target)
+    return {
+        "message": f"최고관리자를 {new_owner.name} 회원에게 양도했습니다.",
+        "member": MemberAdminResponse.model_validate(new_owner),
+    }
 
 
 @router.delete("/members/{public_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -372,7 +443,9 @@ def reset_member_password(
     - 대상 회원 한 명에게만 무작위 임시 비밀번호를 새로 발급합니다.
     - 임시 비밀번호는 BCrypt로 해싱해 저장하고, 평문은 응답에만 포함합니다.
     - 이메일 발송은 이번 Issue 범위에 포함하지 않습니다.
+    - 다른 관리자 계정의 비밀번호는 최고관리자만 초기화할 수 있습니다.
     """
+    _guard_admin_target(db, public_id, current_member)
     member = get_member_by_public_id(db, public_id)
     if member is None:
         raise HTTPException(

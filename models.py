@@ -47,6 +47,9 @@ class MemberDB(Base):
         Enum("admin", "member", name="member_system_role"),
         default="member",
     )  # 사이트 관리 권한
+    # 최고관리자(동아리 사이트 주인). 항상 system_role=admin 이며 한 명만 둡니다.
+    # 관리자 임명·해제와 최고관리자 양도는 최고관리자만 할 수 있습니다.
+    is_owner: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     club_position: Mapped[str] = mapped_column(
         Enum(
             "president",

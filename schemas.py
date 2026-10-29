@@ -159,6 +159,7 @@ class MemberResponse(BaseModel):
     grade: int = Field(description="학년 (1~4)")
     email: str = Field(description="이메일")
     system_role: str = Field(description="사이트 권한 (admin / member)")
+    is_owner: bool = Field(default=False, description="최고관리자 여부 (관리자 임명 권한)")
     club_position: str = Field(
         description="동아리 직책 (president / vice_president / treasurer / officer / member)"
     )
@@ -201,6 +202,12 @@ class MemberSystemRoleUpdateRequest(BaseModel):
         description="변경할 사이트 권한 (admin / member)",
         examples=["admin"],
     )
+
+
+class OwnerTransferRequest(BaseModel):
+    """최고관리자 양도 요청 스키마."""
+
+    public_id: str = Field(description="새 최고관리자가 될 회원의 public_id (승인된 회원)")
 
 
 class MemberClubPositionUpdateRequest(BaseModel):

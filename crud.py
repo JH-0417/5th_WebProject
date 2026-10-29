@@ -119,6 +119,20 @@ def count_members_by_system_role(db: Session, system_role: str) -> int:
     )
 
 
+def transfer_owner(db: Session, current_owner: MemberDB, new_owner: MemberDB) -> MemberDB:
+    """
+    최고관리자를 양도합니다.
+
+    새 최고관리자는 admin 권한을 함께 받고, 기존 최고관리자는 일반 admin으로 남습니다.
+    """
+    current_owner.is_owner = False
+    new_owner.system_role = "admin"
+    new_owner.is_owner = True
+    db.commit()
+    db.refresh(new_owner)
+    return new_owner
+
+
 def set_member_system_role(
     db: Session,
     public_id: str,
