@@ -252,7 +252,7 @@ export function ProfileEditPage() {
         </form>
 
         <p className="switch-link">
-          <Link to="/dashboard">대시보드로 돌아가기</Link>
+          <Link to="/mypage">마이페이지로 돌아가기</Link>
         </p>
       </section>
     </main>

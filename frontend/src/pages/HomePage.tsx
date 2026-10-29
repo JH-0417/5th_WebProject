@@ -4,7 +4,7 @@ import { clearAccessToken, fetchMe } from "../api/auth";
 import type { MeResponse } from "../types/auth";
 
 /**
- * 로그인 후 회원 대시보드(내 정보) 페이지
+ * 로그인 후 회원 마이페이지
  *
  * 흐름:
  * 1) 마운트 시 GET /auth/me 호출
@@ -57,7 +57,7 @@ export function HomePage() {
   return (
     <main className="page">
       <section className="card card-wide">
-        <h1>내 대시보드</h1>
+        <h1>마이페이지</h1>
         <p className="subtitle">회원 정보와 관리 메뉴를 확인하세요.</p>
 
         {loading ? <p className="muted">불러오는 중...</p> : null}

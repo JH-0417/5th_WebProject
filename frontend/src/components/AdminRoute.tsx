@@ -48,10 +48,10 @@ export function AdminRoute({ children }: AdminRouteProps) {
   }
 
   // 토큰이 지워진 경우(fetchMe 실패)는 로그인으로
-  // system_role 이 admin 이 아니면 대시보드로
+  // system_role 이 admin 이 아니면 마이페이지로
   if (!allowed) {
     const tokenGone = !getAccessToken();
-    return <Navigate to={tokenGone ? "/login" : "/dashboard"} replace />;
+    return <Navigate to={tokenGone ? "/login" : "/mypage"} replace />;
   }
 
   return <>{children}</>;

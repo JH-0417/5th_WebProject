@@ -1005,6 +1005,89 @@ button[type="submit"]:disabled {
   gap: 4px;
 }
 
+.site-nav-group {
+  position: relative;
+}
+
+.site-nav-group-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #4b5563;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.site-nav-group-button > span {
+  font-size: 0.75rem;
+  transition: transform 160ms ease;
+}
+
+.site-nav-group-button:hover,
+.site-nav-group-button.active,
+.site-nav-group.open .site-nav-group-button {
+  background: #eafaf1;
+  color: #087941;
+}
+
+.site-nav-group.open .site-nav-group-button > span,
+.site-nav-group:hover .site-nav-group-button > span,
+.site-nav-group:focus-within .site-nav-group-button > span {
+  transform: rotate(180deg);
+}
+
+.site-nav-dropdown {
+  position: absolute;
+  top: calc(100% + 9px);
+  left: 50%;
+  z-index: 120;
+  min-width: 170px;
+  display: none;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 16px 38px rgba(17, 24, 39, 0.14);
+  transform: translateX(-50%);
+}
+
+.site-nav-dropdown::before {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  left: 0;
+  height: 10px;
+}
+
+.site-nav-group:hover .site-nav-dropdown,
+.site-nav-group:focus-within .site-nav-dropdown,
+.site-nav-group.open .site-nav-dropdown {
+  display: grid;
+}
+
+.site-dropdown-link {
+  padding: 11px 12px;
+  border-radius: 8px;
+  color: #374151;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.site-dropdown-link:hover,
+.site-dropdown-link.active {
+  background: #eafaf1;
+  color: #087941;
+}
+
 .site-nav-link,
 .site-login-link {
   padding: 8px 10px;
@@ -1026,7 +1109,7 @@ button[type="submit"]:disabled {
 .site-dashboard-link {
   padding: 9px 13px;
   border-radius: 8px;
-  background: #1d4ed8;
+  background: #00a854;
   color: #fff;
   text-decoration: none;
   font-size: 0.9rem;
@@ -1035,7 +1118,7 @@ button[type="submit"]:disabled {
 
 .site-signup-link:hover,
 .site-dashboard-link:hover {
-  background: #1e40af;
+  background: #087941;
 }
 
 .site-menu-toggle {
@@ -1329,11 +1412,42 @@ button[type="submit"]:disabled {
     gap: 14px;
   }
 
-  .site-nav-links,
+  .site-nav-links {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
   .site-auth-links {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 6px;
+  }
+
+  .site-nav-group-button {
+    width: 100%;
+    justify-content: space-between;
+    padding: 11px 12px;
+  }
+
+  .site-nav-dropdown {
+    position: static;
+    min-width: 0;
+    margin: 4px 0 6px;
+    padding: 5px;
+    border-radius: 9px;
+    background: #f8fafc;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .site-nav-dropdown::before {
+    display: none;
+  }
+
+  .site-nav-group:not(.open):hover .site-nav-dropdown,
+  .site-nav-group:not(.open):focus-within .site-nav-dropdown {
+    display: none;
   }
 
   .site-auth-links {
@@ -1430,6 +1544,7 @@ button[type="submit"]:disabled {
 }
 
 .site-header-home .site-brand,
+.site-header-home .site-nav-group-button,
 .site-header-home .site-nav-link,
 .site-header-home .site-login-link {
   color: #e5e7eb;
@@ -1439,6 +1554,9 @@ button[type="submit"]:disabled {
   filter: drop-shadow(0 0 12px rgba(0, 192, 96, 0.25));
 }
 
+.site-header-home .site-nav-group-button:hover,
+.site-header-home .site-nav-group-button.active,
+.site-header-home .site-nav-group.open .site-nav-group-button,
 .site-header-home .site-nav-link:hover,
 .site-header-home .site-nav-link.active,
 .site-header-home .site-login-link:hover {
@@ -1787,6 +1905,21 @@ button[type="submit"]:disabled {
 
   .site-header-home .site-auth-links {
     border-top-color: rgba(255, 255, 255, 0.15);
+  }
+
+  .site-header-home .site-nav-dropdown {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  .site-header-home .site-dropdown-link {
+    color: #dbe4ef;
+  }
+
+  .site-header-home .site-dropdown-link:hover,
+  .site-header-home .site-dropdown-link.active {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
   }
 
   .landing-hero-inner {

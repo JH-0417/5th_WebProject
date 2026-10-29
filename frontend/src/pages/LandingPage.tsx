@@ -106,10 +106,10 @@ export function LandingPage() {
             </p>
             <div className="landing-actions">
               <Link
-                to={loggedIn ? "/dashboard" : "/signup"}
+                to={loggedIn ? "/mypage" : "/signup"}
                 className="landing-primary-action"
               >
-                {loggedIn ? "내 대시보드" : "동아리 지원하기"}
+                {loggedIn ? "마이페이지" : "동아리 지원하기"}
               </Link>
               <Link to="/about" className="landing-secondary-action">
                 더 알아보기
@@ -205,10 +205,10 @@ export function LandingPage() {
           </p>
           <div className="landing-actions">
             <Link
-              to={loggedIn ? "/dashboard" : "/signup"}
+              to={loggedIn ? "/mypage" : "/signup"}
               className="landing-primary-action"
             >
-              {loggedIn ? "대시보드 이동" : "지원하기"}
+              {loggedIn ? "마이페이지 이동" : "지원하기"}
             </Link>
             <Link to="/projects" className="landing-dark-action">
               프로젝트 보기

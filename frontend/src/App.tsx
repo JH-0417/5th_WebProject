@@ -30,7 +30,8 @@ import { SignupPage } from "./pages/SignupPage";
  *
  * 경로 정리:
  *   /               → LandingPage (공개)
- *   /dashboard      → HomePage (로그인 필요)
+ *   /mypage         → HomePage (로그인 필요)
+ *   /dashboard      → /mypage 이전 주소 호환 이동
  *   /me/edit        → ProfileEditPage (로그인 필요)
  *   /admin/members  → AdminMembersPage (admin 필요)
  *   /admin/notices  → 관리자 공지 작성·수정·삭제
@@ -55,13 +56,14 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route
-          path="/dashboard"
+          path="/mypage"
           element={
             <ProtectedRoute>
               <HomePage />
             </ProtectedRoute>
           }
         />
+        <Route path="/dashboard" element={<Navigate to="/mypage" replace />} />
         <Route
           path="/me/edit"
           element={
