@@ -6,11 +6,11 @@ Cloudinary 이미지 저장 모듈.
 """
 
 import os
+import re
 from typing import Optional
 
 import cloudinary
 import cloudinary.uploader
-import cloudinary.utils
 from dotenv import load_dotenv
 from fastapi import HTTPException, status
 
@@ -77,17 +77,36 @@ def upload_gallery_image(file_bytes: bytes) -> str:
     return result["secure_url"]
 
 
+def extract_cloudinary_public_id(image_url: str) -> Optional[str]:
+    """
+    Cloudinary 이미지 URL에서 삭제에 필요한 public_id를 꺼냅니다.
+
+    예) https://res.cloudinary.com/<cloud>/image/upload/v1786613713/5th_webproject/gallery/abc.png
+        → "5th_webproject/gallery/abc"
+    (설치된 cloudinary SDK에는 URL → public_id 변환 함수가 없어 직접 처리합니다.)
+    """
+    if not image_url or "res.cloudinary.com" not in image_url:
+        return None
+    path = image_url.split("/upload/", 1)
+    if len(path) != 2:
+        return None
+    # 버전(v123...) 앞의 변환 옵션(w_300,c_fill 등)은 버리고, 버전 뒤 경로만 사용합니다.
+    rest = path[1].split("?", 1)[0].split("#", 1)[0]
+    match = re.search(r"(?:^|/)v\d+/(.+)$", rest)
+    if match:
+        rest = match.group(1)
+    public_id = re.sub(r"\.[A-Za-z0-9]+$", "", rest)
+    return public_id or None
+
+
 def delete_gallery_image(image_url: str) -> None:
     """Cloudinary에 저장된 이미지를 삭제합니다. 실패해도 DB 삭제는 계속 진행합니다."""
-    if not image_url or "cloudinary.com" not in image_url:
-        return
-
-    _configure_cloudinary()
-    public_id = cloudinary.utils.public_id_from_url(image_url)
+    public_id = extract_cloudinary_public_id(image_url)
     if not public_id:
         return
 
     try:
+        _configure_cloudinary()
         cloudinary.uploader.destroy(public_id, resource_type="image")
     except Exception:
         return

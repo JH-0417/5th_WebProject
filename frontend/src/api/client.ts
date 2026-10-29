@@ -31,7 +31,7 @@ export async function apiRequest<T>(
     });
   } catch {
     throw new Error(
-      "백엔드 서버에 연결할 수 없습니다. uvicorn이 실행 중인지 확인하세요. (http://127.0.0.1:8000)",
+      `백엔드 서버에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요. (${API_BASE_URL})`,
     );
   }
 

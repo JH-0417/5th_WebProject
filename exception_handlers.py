@@ -55,11 +55,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             },
         )
 
-    @app.exception_handler(Exception)
-    async def unhandled_exception_handler(
-        request: Request,
-        exc: Exception,
-    ) -> JSONResponse:
+    def _server_error_response(request: Request, exc: Exception) -> JSONResponse:
         # 스택 트레이스는 서버 로그에만 남기고, 클라이언트에는 일반 메시지만 반환합니다.
         logger.error(
             "처리되지 않은 서버 오류: %s %s",
@@ -71,3 +67,21 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "서버 내부 오류가 발생했습니다."},
         )
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(
+        request: Request,
+        exc: Exception,
+    ) -> JSONResponse:
+        return _server_error_response(request, exc)
+
+    # exception_handler(Exception)는 CORS 미들웨어 바깥에서 실행되어 500 응답에 CORS 헤더가 빠지고,
+    # 브라우저는 이를 "서버에 연결할 수 없음"으로 처리합니다.
+    # 그래서 CORS 미들웨어 안쪽에서 한 번 더 잡아 CORS 헤더가 붙은 500 응답을 돌려줍니다.
+    # (main.py에서 이 함수를 CORSMiddleware 등록보다 먼저 호출해야 합니다.)
+    @app.middleware("http")
+    async def catch_unhandled_errors(request: Request, call_next):
+        try:
+            return await call_next(request)
+        except Exception as exc:  # noqa: BLE001 - 모든 예상치 못한 오류를 500으로 변환
+            return _server_error_response(request, exc)
