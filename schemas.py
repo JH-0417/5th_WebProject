@@ -503,6 +503,19 @@ class StudyCreateRequest(BaseModel):
         description="진행 상태 (planned / in_progress / completed)",
         examples=["planned"],
     )
+    meeting_schedule: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="모임 일정 (자유 형식)",
+        examples=["매주 수요일 19:00~20:00"],
+    )
+    location: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="모임 장소",
+        examples=["학생회관 423호"],
+    )
+    is_recruiting: bool = Field(default=False, description="스터디원 모집 중 여부")
 
 
 class StudyUpdateRequest(BaseModel):
@@ -530,10 +543,27 @@ class StudyUpdateRequest(BaseModel):
         description="진행 상태 (planned / in_progress / completed)",
         examples=["in_progress"],
     )
+    meeting_schedule: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="모임 일정 (자유 형식, null이면 지움)",
+        examples=["매주 수요일 19:00~20:00"],
+    )
+    location: Optional[str] = Field(
+        default=None,
+        max_length=100,
+        description="모임 장소 (null이면 지움)",
+        examples=["학생회관 423호"],
+    )
+    is_recruiting: Optional[bool] = Field(default=None, description="스터디원 모집 중 여부")
 
 
 class StudyResponse(ProjectResponse):
-    """스터디 응답 스키마. ProjectResponse와 동일 필드입니다."""
+    """스터디 응답 스키마. ProjectResponse 필드에 스터디 운영 정보를 더합니다."""
+
+    meeting_schedule: Optional[str] = Field(default=None, description="모임 일정")
+    location: Optional[str] = Field(default=None, description="모임 장소")
+    is_recruiting: bool = Field(description="스터디원 모집 중 여부")
 
 
 class StudyListResponse(BaseModel):

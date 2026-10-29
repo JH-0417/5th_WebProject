@@ -5,7 +5,9 @@ Issue #10: Study는 ProjectDB(category="study")를 재사용합니다.
 생성·수정·삭제는 admin.py의 /admin/studies 경로에서 처리합니다.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from crud import get_studies, get_study_by_public_id
@@ -16,13 +18,20 @@ router = APIRouter(prefix="/studies", tags=["스터디"])
 
 
 @router.get("", response_model=StudyListResponse)
-def list_studies(db: Session = Depends(get_db)):
+def list_studies(
+    recruiting: Optional[bool] = Query(
+        default=None,
+        description="true: 모집 중인 스터디만, false: 모집 마감만, 생략: 전체",
+    ),
+    db: Session = Depends(get_db),
+):
     """
     스터디 목록 조회 API (Public).
 
     category=study 인 항목만 반환합니다.
+    모임 일정·장소·모집 여부(meeting_schedule, location, is_recruiting)를 함께 반환합니다.
     """
-    studies = get_studies(db)
+    studies = get_studies(db, is_recruiting=recruiting)
     return {
         "total": len(studies),
         "items": [StudyResponse.model_validate(s) for s in studies],

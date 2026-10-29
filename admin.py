@@ -493,8 +493,14 @@ def patch_admin_study(
     - require_admin()으로 관리자만 접근 가능합니다.
     - 요청에 포함된 필드만 수정합니다. (Partial Update)
     - category=study 가 아니면 404를 반환합니다.
+    - meeting_schedule, location은 null을 보내면 지웁니다.
+      비울 수 없는 필드(title, description, status, is_recruiting)의 null은 무시합니다.
     """
-    study = update_study(db, public_id, payload.model_dump(exclude_unset=True))
+    updates = payload.model_dump(exclude_unset=True)
+    for field in ("title", "description", "status", "is_recruiting"):
+        if field in updates and updates[field] is None:
+            updates.pop(field)
+    study = update_study(db, public_id, updates)
     if study is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

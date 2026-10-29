@@ -197,14 +197,12 @@ def get_projects(db: Session) -> List[ProjectDB]:
     )
 
 
-def get_studies(db: Session) -> List[ProjectDB]:
-    """category=study 인 목록을 id 오름차순으로 반환합니다."""
-    return (
-        db.query(ProjectDB)
-        .filter(ProjectDB.category == "study")
-        .order_by(ProjectDB.id)
-        .all()
-    )
+def get_studies(db: Session, is_recruiting: Optional[bool] = None) -> List[ProjectDB]:
+    """category=study 인 목록을 id 오름차순으로 반환합니다. is_recruiting으로 모집 여부 필터링."""
+    query = db.query(ProjectDB).filter(ProjectDB.category == "study")
+    if is_recruiting is not None:
+        query = query.filter(ProjectDB.is_recruiting == is_recruiting)
+    return query.order_by(ProjectDB.id).all()
 
 
 def get_project_by_public_id(db: Session, public_id: str) -> Optional[ProjectDB]:

@@ -99,6 +99,10 @@ class ProjectDB(Base):
         Enum("project", "study", name="project_category"),
         default="project",
     )
+    # 스터디 운영 정보 (category=study 에서 사용, 프로젝트는 비워둠)
+    meeting_schedule: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # 예: "매주 수요일 19:00~20:00"
+    location: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)  # 예: "학생회관 423호", "디스코드"
+    is_recruiting: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())  # 스터디원 모집 중 여부
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,
