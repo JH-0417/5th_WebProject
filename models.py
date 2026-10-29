@@ -178,7 +178,12 @@ class GalleryDB(Base):
     public_id: Mapped[str] = mapped_column(String(36), unique=True, default=generate_uuid)
     image_url: Mapped[str] = mapped_column(String(500))
     caption: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
-    uploaded_by: Mapped[int] = mapped_column(Integer, ForeignKey("members.id"))
+    # 업로드한 회원이 삭제되어도 사진은 남기고 업로더만 비웁니다.
+    uploaded_by: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("members.id", ondelete="SET NULL"),
+        nullable=True,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,
