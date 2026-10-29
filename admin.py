@@ -15,6 +15,9 @@ from sqlalchemy.orm import Session
 
 from crud import (
     count_members_by_system_role,
+    delete_contact_inquiry,
+    get_contact_inquiries,
+    set_contact_inquiry_resolved,
     create_faq,
     create_gallery,
     create_notice,
@@ -43,6 +46,9 @@ from database import get_db
 from dependencies import require_admin
 from models import MemberDB
 from schemas import (
+    ContactListResponse,
+    ContactResponse,
+    ContactUpdateRequest,
     FaqCreateRequest,
     FaqResponse,
     GalleryCreateRequest,
@@ -742,3 +748,70 @@ def remove_admin_faq(
             detail="해당 FAQ를 찾을 수 없습니다.",
         )
     return {"message": "FAQ가 삭제되었습니다."}
+
+
+# ─── 문의 관리 ───────────────────────────────────────────────────────────────
+
+@router.get("/contacts", response_model=ContactListResponse)
+def list_admin_contacts(
+    is_resolved: Optional[bool] = Query(
+        default=None,
+        description="처리 여부 필터 (true: 처리 완료, false: 미처리, 생략: 전체)",
+    ),
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 문의 목록 조회 API.
+
+    - require_admin()으로 관리자만 접근 가능합니다.
+    - 최신 문의부터 반환합니다.
+    """
+    inquiries = get_contact_inquiries(db, is_resolved=is_resolved)
+    return {
+        "total": len(inquiries),
+        "items": [ContactResponse.model_validate(i) for i in inquiries],
+    }
+
+
+@router.patch("/contacts/{public_id}", response_model=ContactResponse)
+def update_admin_contact(
+    public_id: str,
+    payload: ContactUpdateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 문의 처리 상태 변경 API.
+
+    - 답변을 마친 문의는 is_resolved=true 로 표시합니다.
+    - 존재하지 않으면 404를 반환합니다.
+    """
+    inquiry = set_contact_inquiry_resolved(db, public_id, payload.is_resolved)
+    if inquiry is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 문의를 찾을 수 없습니다.",
+        )
+    return ContactResponse.model_validate(inquiry)
+
+
+@router.delete("/contacts/{public_id}")
+def remove_admin_contact(
+    public_id: str,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    관리자용 문의 삭제 API.
+
+    - 존재하지 않으면 404를 반환합니다.
+    - 성공 시 200 + message를 반환합니다.
+    """
+    deleted = delete_contact_inquiry(db, public_id)
+    if deleted is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 문의를 찾을 수 없습니다.",
+        )
+    return {"message": "문의가 삭제되었습니다."}

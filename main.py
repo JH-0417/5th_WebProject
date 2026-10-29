@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from admin import router as admin_router
 from auth import router as auth_router
 from calendars import router as calendar_router
+from contacts import router as contacts_router
 from exception_handlers import register_exception_handlers
 from faqs import router as faqs_router
 from gallery import router as gallery_router
@@ -38,7 +39,7 @@ CORS_ORIGINS = list(dict.fromkeys(LOCAL_CORS_ORIGINS + DEPLOYED_CORS_ORIGINS))
 
 app = FastAPI(
     title="제 5세대 웹사이트 API",
-    description="동아리 부원 관리, 프로젝트, 공지사항, 갤러리, 캘린더, 지원서",
+    description="동아리 부원 관리, 프로젝트, 공지사항, 갤러리, 캘린더, 지원서, 문의",
     version="0.1.0"
 )
 
@@ -60,6 +61,7 @@ app.include_router(notices_router)
 app.include_router(calendar_router)
 app.include_router(gallery_router)
 app.include_router(faqs_router)
+app.include_router(contacts_router)
 app.include_router(admin_router)
 
 

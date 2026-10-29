@@ -11,6 +11,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    false,
     func,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -212,6 +213,27 @@ class FaqDB(Base):
     public_id: Mapped[str] = mapped_column(String(36), unique=True, default=generate_uuid)
     question: Mapped[str] = mapped_column(String(200))
     answer: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        server_default=func.now(),
+    )
+
+
+# ─── 문의 (Contact) ─────────────────────────────────────────────────────
+
+class ContactInquiryDB(Base):
+    """사이트 Contact 폼으로 들어온 외부 문의. 관리자만 조회합니다."""
+
+    __tablename__ = "contact_inquiries"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, default=generate_uuid)
+    name: Mapped[str] = mapped_column(String(30))
+    email: Mapped[str] = mapped_column(String(255))
+    subject: Mapped[str] = mapped_column(String(100))
+    message: Mapped[str] = mapped_column(Text)
+    is_resolved: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())  # 답변·처리 완료 여부
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,

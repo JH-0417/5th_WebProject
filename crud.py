@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from models import (
     ActivityMembershipDB,
+    ContactInquiryDB,
     FaqDB,
     GalleryDB,
     MemberDB,
@@ -505,3 +506,55 @@ def delete_faq(db: Session, public_id: str) -> Optional[FaqDB]:
     db.delete(faq)
     db.commit()
     return faq
+
+
+# ─── 문의 (Contact) ─────────────────────────────────────────────────────
+
+def create_contact_inquiry(db: Session, data: dict) -> ContactInquiryDB:
+    """Contact 폼 문의를 저장합니다."""
+    inquiry = ContactInquiryDB(**data)
+    db.add(inquiry)
+    db.commit()
+    db.refresh(inquiry)
+    return inquiry
+
+
+def get_contact_inquiries(
+    db: Session,
+    is_resolved: Optional[bool] = None,
+) -> List[ContactInquiryDB]:
+    """문의 목록을 최신순으로 반환합니다. is_resolved로 처리 여부를 걸러낼 수 있습니다."""
+    query = db.query(ContactInquiryDB)
+    if is_resolved is not None:
+        query = query.filter(ContactInquiryDB.is_resolved == is_resolved)
+    return query.order_by(ContactInquiryDB.created_at.desc(), ContactInquiryDB.id.desc()).all()
+
+
+def get_contact_inquiry_by_public_id(db: Session, public_id: str) -> Optional[ContactInquiryDB]:
+    """public_id로 문의 단건을 조회합니다. 없으면 None."""
+    return db.query(ContactInquiryDB).filter(ContactInquiryDB.public_id == public_id).first()
+
+
+def set_contact_inquiry_resolved(
+    db: Session,
+    public_id: str,
+    is_resolved: bool,
+) -> Optional[ContactInquiryDB]:
+    """문의 처리 완료 여부를 변경합니다. 없으면 None."""
+    inquiry = get_contact_inquiry_by_public_id(db, public_id)
+    if inquiry is None:
+        return None
+    inquiry.is_resolved = is_resolved
+    db.commit()
+    db.refresh(inquiry)
+    return inquiry
+
+
+def delete_contact_inquiry(db: Session, public_id: str) -> Optional[ContactInquiryDB]:
+    """public_id로 문의를 삭제합니다. 없으면 None."""
+    inquiry = get_contact_inquiry_by_public_id(db, public_id)
+    if inquiry is None:
+        return None
+    db.delete(inquiry)
+    db.commit()
+    return inquiry

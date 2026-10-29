@@ -743,3 +743,60 @@ class FaqListResponse(BaseModel):
 
     total: int = Field(description="전체 FAQ 수")
     items: List[FaqResponse] = Field(description="FAQ 목록")
+
+
+# ─── 문의 (Contact) ─────────────────────────────────────────────────────
+
+class ContactCreateRequest(BaseModel):
+    """Contact 폼 문의 등록 요청 스키마 (비로그인 가능)."""
+
+    name: str = Field(..., min_length=1, max_length=30, description="이름", examples=["홍길동"])
+    email: EmailStr = Field(..., description="답변 받을 이메일", examples=["hong@example.com"])
+    subject: str = Field(
+        ...,
+        min_length=1,
+        max_length=100,
+        description="문의 제목",
+        examples=["동아리 가입 문의"],
+    )
+    message: str = Field(
+        ...,
+        min_length=1,
+        max_length=2000,
+        description="문의 내용",
+        examples=["2학기에도 가입할 수 있나요?"],
+    )
+
+
+class ContactCreateResponse(BaseModel):
+    """문의 등록 성공 응답. 문의자에게는 처리 결과 메시지만 돌려줍니다."""
+
+    message: str = Field(description="처리 결과 메시지")
+
+
+class ContactResponse(BaseModel):
+    """관리자용 문의 응답 스키마. 내부 id는 노출하지 않습니다."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    public_id: str = Field(description="공개 식별자 (UUID)")
+    name: str = Field(description="이름")
+    email: str = Field(description="답변 받을 이메일")
+    subject: str = Field(description="문의 제목")
+    message: str = Field(description="문의 내용")
+    is_resolved: bool = Field(description="처리 완료 여부")
+    created_at: datetime = Field(description="등록 시각")
+
+
+class ContactListResponse(BaseModel):
+    """관리자용 문의 목록 응답 스키마."""
+
+    total: int = Field(description="문의 수")
+    items: List[ContactResponse] = Field(description="문의 목록 (최신순)")
+
+
+class ContactUpdateRequest(BaseModel):
+    """관리자용 문의 처리 상태 변경 요청 스키마."""
+
+    is_resolved: bool = Field(..., description="처리 완료 여부")
+
