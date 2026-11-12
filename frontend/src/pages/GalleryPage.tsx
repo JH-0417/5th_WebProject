@@ -38,7 +38,7 @@ export function GalleryPage() {
 
   return (
     <main className="page">
-      <section className="card card-gallery">
+      <section className="card card-gallery card-full">
         <h1>활동 갤러리</h1>
         <p className="subtitle">동아리의 활동 모습을 확인하세요.</p>
 

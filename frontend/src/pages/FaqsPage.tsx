@@ -35,7 +35,7 @@ export function FaqsPage() {
 
   return (
     <main className="page">
-      <section className="card card-faq">
+      <section className="card card-faq card-full">
         <h1>자주 묻는 질문</h1>
         <p className="subtitle">
           궁금한 질문을 선택하면 답변을 확인할 수 있습니다.

@@ -1,6 +1,6 @@
+import { useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { getAccessToken } from "../api/auth";
-import heroImage from "../assets/hero.png";
 import { useRecruitment } from "../utils/useRecruitmentOpen";
 
 const ACTIVITIES = [
@@ -56,53 +56,99 @@ const STORIES = [
   },
 ];
 
-type SocialIconName = "instagram" | "github" | "kakao";
-
-function SocialIcon({ name }: { name: SocialIconName }) {
-  if (name === "instagram") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <rect x="3" y="3" width="18" height="18" rx="5" />
-        <circle cx="12" cy="12" r="4.2" />
-        <circle className="social-icon-dot" cx="17.5" cy="6.5" r="1" />
-      </svg>
-    );
-  }
-
-  if (name === "github") {
-    return (
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M12 2.8a9.4 9.4 0 0 0-3 18.3c.5.1.7-.2.7-.5v-1.8c-2.8.6-3.4-1.2-3.4-1.2-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 0 1.6 1 1.6 1 .9 1.6 2.4 1.1 2.9.9.1-.7.4-1.1.7-1.4-2.3-.3-4.6-1.1-4.6-4.7 0-1 .4-1.9 1-2.6-.1-.3-.4-1.3.1-2.6 0 0 .8-.3 2.7 1a9.3 9.3 0 0 1 4.9 0c1.8-1.3 2.7-1 2.7-1 .5 1.3.2 2.3.1 2.6.6.7 1 1.6 1 2.6 0 3.6-2.3 4.4-4.6 4.7.4.3.7 1 .7 1.9v3c0 .3.2.6.7.5A9.4 9.4 0 0 0 12 2.8Z" />
-      </svg>
-    );
-  }
-
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 3C6.5 3 2 6.5 2 10.8c0 2.8 1.9 5.3 4.8 6.7l-1 3.5c-.1.3.3.5.5.3l4.2-2.8c.5.1 1 .1 1.5.1 5.5 0 10-3.5 10-7.8S17.5 3 12 3Z" />
-    </svg>
-  );
-}
-
 /** 누구나 접근할 수 있는 메인 랜딩 페이지 */
 export function LandingPage() {
   const loggedIn = Boolean(getAccessToken());
   const recruitment = useRecruitment();
   // 불러오기 전(null)에는 기존처럼 지원 링크를 보여 주고, 닫힘이 확인되면 마감 표시
   const recruitmentClosed = recruitment?.is_open === false;
+  const heroVideoRef = useRef<HTMLVideoElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
+
+  // 스크롤에 따라 배경 영상은 천천히 확대·이동, 문구는 서서히 사라지는 패럴랙스
+  useEffect(() => {
+    const hero = heroRef.current;
+    if (!hero || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return;
+    }
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const progress = Math.min(
+        Math.max(window.scrollY / Math.max(hero.offsetHeight, 1), 0),
+        1,
+      );
+      hero.style.setProperty("--hero-scroll", progress.toFixed(4));
+
+      // 밝은 시트가 화면 아래에서 올라오며 양옆으로 넓어지는 정도 (0 → 1)
+      const sheet = sheetRef.current;
+      if (sheet) {
+        const top = sheet.getBoundingClientRect().top;
+        const vh = window.innerHeight;
+        const enter = Math.min(Math.max((vh - top) / (vh * 0.75), 0), 1);
+        sheet.style.setProperty("--sheet-in", enter.toFixed(4));
+      }
+    };
+    const onScroll = () => {
+      if (!frame) frame = window.requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
+  }, []);
+
+  // React는 muted를 HTML 속성으로 내보내지 않아 일부 브라우저(iOS Safari 등)에서
+  // 자동재생이 막히므로 직접 지정한 뒤 재생을 시도한다.
+  useEffect(() => {
+    const video = heroVideoRef.current;
+    if (!video) return;
+    video.muted = true;
+    video.defaultMuted = true;
+    video.play().catch(() => {});
+  }, []);
 
   return (
     <main className="landing">
-      <section className="landing-hero">
+      <section className="landing-hero" ref={heroRef}>
+        <div className="landing-hero-media" aria-hidden="true">
+          <video
+            ref={heroVideoRef}
+            className="landing-hero-video"
+            src="/home.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+          />
+          <div className="landing-hero-overlay" />
+        </div>
+
         <div className="landing-hero-inner">
           <div className="landing-hero-content">
-            <p className="landing-club-meta">
-              건국대학교 글로컬캠퍼스 IT 동아리
+            <p className="landing-hero-badge">
+              <span aria-hidden="true" />
+              중앙동아리 창업학술분과 | 건국대학교 글로컬캠퍼스
             </p>
-            <p className="landing-club-submeta">
-              중앙동아리 창업학술분과 · KONKUK UNIV.
-            </p>
-            <h1>제 5세대</h1>
+            <h1 aria-label="제 5세대">
+              {Array.from("제 5세대").map((char, index) => (
+                <span
+                  key={index}
+                  className="landing-hero-char"
+                  style={{ animationDelay: `${0.25 + index * 0.07}s` }}
+                  aria-hidden="true"
+                >
+                  {char === " " ? "\u00a0" : char}
+                </span>
+              ))}
+            </h1>
+            <p className="landing-hero-subtitle">Konkuk Univ. IT Club</p>
             <p className="landing-hero-description">
               함께 코딩하고, 함께 성장하는 공간.
               <br />
@@ -126,16 +172,11 @@ export function LandingPage() {
               </Link>
             </div>
           </div>
+        </div>
 
-          <div className="landing-visual" aria-hidden="true">
-            <img
-              className="landing-generation-mark"
-              src="/brand/gen5_logo.png"
-              alt=""
-            />
-            <img className="landing-hero-image" src={heroImage} alt="" />
-            <span className="landing-visual-label">V-GENERATION</span>
-          </div>
+        <div className="landing-scroll-hint" aria-hidden="true">
+          <span>스크롤</span>
+          <i>↓</i>
         </div>
       </section>
 
@@ -149,54 +190,56 @@ export function LandingPage() {
         </div>
       </div>
 
-      <section id="about" className="landing-section landing-programs">
-        <div className="landing-section-heading">
-          <p>WHAT WE DO</p>
-          <h2>우리는 함께 성장합니다</h2>
-          <span>
-            배우고, 만들고, 나누는 모든 과정이 우리의 성장 경험이 됩니다.
-          </span>
-        </div>
+      <div className="landing-sheet" ref={sheetRef}>
+        <section id="about" className="landing-section landing-programs">
+          <div className="landing-section-heading">
+            <p>WHAT WE DO</p>
+            <h2>우리는 함께 성장합니다</h2>
+            <span>
+              배우고, 만들고, 나누는 모든 과정이 우리의 성장 경험이 됩니다.
+            </span>
+          </div>
 
-        <div className="landing-program-grid">
-          {PROGRAMS.map((program) => (
-            <article key={program.number} className="landing-program-card">
-              <span>{program.number}</span>
-              <h3>{program.title}</h3>
-              <p>{program.description}</p>
-            </article>
-          ))}
-        </div>
+          <div className="landing-program-grid">
+            {PROGRAMS.map((program) => (
+              <article key={program.number} className="landing-program-card">
+                <span>{program.number}</span>
+                <h3>{program.title}</h3>
+                <p>{program.description}</p>
+              </article>
+            ))}
+          </div>
 
-        <div className="landing-content-links">
-          <Link to="/studies">스터디 보기 →</Link>
-          <Link to="/projects">프로젝트 보기 →</Link>
-          <Link to="/gallery">활동 사진 보기 →</Link>
-          <Link to="/calendar">일정 확인 →</Link>
-        </div>
-      </section>
+          <div className="landing-content-links">
+            <Link to="/studies">스터디 보기 →</Link>
+            <Link to="/projects">프로젝트 보기 →</Link>
+            <Link to="/gallery">활동 사진 보기 →</Link>
+            <Link to="/calendar">일정 확인 →</Link>
+          </div>
+        </section>
 
-      <section className="landing-stories">
-        <div className="landing-section-heading">
-          <p>MEMBER STORIES</p>
-          <h2>동아리원들의 이야기</h2>
-        </div>
+        <section className="landing-stories">
+          <div className="landing-section-heading">
+            <p>MEMBER STORIES</p>
+            <h2>동아리원들의 이야기</h2>
+          </div>
 
-        <div className="landing-story-grid">
-          {STORIES.map((story) => (
-            <article key={story.name} className="landing-story-card">
-              <div className="landing-story-person">
-                <span>{story.initial}</span>
-                <div>
-                  <strong>{story.name}</strong>
-                  <small>{story.department}</small>
+          <div className="landing-story-grid">
+            {STORIES.map((story) => (
+              <article key={story.name} className="landing-story-card">
+                <div className="landing-story-person">
+                  <span>{story.initial}</span>
+                  <div>
+                    <strong>{story.name}</strong>
+                    <small>{story.department}</small>
+                  </div>
                 </div>
-              </div>
-              <blockquote>“{story.quote}”</blockquote>
-            </article>
-          ))}
-        </div>
-      </section>
+                <blockquote>“{story.quote}”</blockquote>
+              </article>
+            ))}
+          </div>
+        </section>
+      </div>
 
       <section className="landing-join">
         <div>
@@ -232,81 +275,6 @@ export function LandingPage() {
           </div>
         </div>
       </section>
-
-      <footer className="landing-footer">
-        <div className="landing-footer-brand">
-          <div>
-            <img src="/brand/gen5_logo.png" alt="" aria-hidden="true" />
-            <strong>제 5세대</strong>
-          </div>
-          <span>건국대학교 글로컬캠퍼스 IT 동아리</span>
-          <div className="landing-social-links">
-            <a
-              href="https://www.instagram.com/"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Instagram"
-              title="Instagram"
-            >
-              <SocialIcon name="instagram" />
-            </a>
-            <a
-              href="https://github.com/"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="GitHub"
-              title="GitHub"
-            >
-              <SocialIcon name="github" />
-            </a>
-            <a
-              href="https://open.kakao.com/"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="Kakao Open Chat"
-              title="Kakao Open Chat"
-            >
-              <SocialIcon name="kakao" />
-            </a>
-          </div>
-        </div>
-
-        <div className="landing-footer-links">
-          <strong>Quick Links</strong>
-          <Link to="/">Home</Link>
-          <Link to="/about">About</Link>
-          <Link to="/members">Members</Link>
-          <Link to="/projects">Projects</Link>
-          <Link to="/calendar">Events</Link>
-          <Link to="/gallery">Gallery</Link>
-        </div>
-
-        <div className="landing-footer-contact">
-          <strong>Contact</strong>
-          <address>
-            충청북도 충주시 충원대로 268
-            <br />
-            건국대학교 글로컬캠퍼스
-            <br />
-            학생회관 423호
-          </address>
-          <a
-            href="https://naver.me/FZobp3rZ"
-            target="_blank"
-            rel="noreferrer"
-          >
-            네이버 지도에서 보기 →
-          </a>
-        </div>
-
-        <small className="landing-footer-copy">
-          © 2026 제 5세대. All rights reserved.
-          <br />
-          Made with ❤ by 5th Generation
-          <br />
-          Created by 류종걸, 박하원, 유수민
-        </small>
-      </footer>
     </main>
   );
 }

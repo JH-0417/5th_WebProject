@@ -38,7 +38,7 @@ export function NoticesPage() {
 
   return (
     <main className="page">
-      <section className="card card-wide">
+      <section className="card card-wide card-full">
         <h1>공지사항</h1>
         <p className="subtitle">동아리의 새로운 소식을 확인하세요.</p>
 
