@@ -46,6 +46,19 @@ export function updateMyProfile(
 }
 
 /**
+ * DELETE /members/me — 회원 탈퇴 (비밀번호 확인 후 개인정보 즉시 삭제)
+ */
+export function withdrawMyAccount(
+  password: string,
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>("/members/me", {
+    method: "DELETE",
+    headers: authHeaders(),
+    body: JSON.stringify({ password }),
+  });
+}
+
+/**
  * PATCH /members/me/password — 본인 비밀번호 변경
  * 현재 비밀번호가 맞아야 새 비밀번호로 바뀝니다.
  */

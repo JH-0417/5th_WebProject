@@ -4,6 +4,7 @@ import { deleteNotice } from "../api/admin";
 import { fetchNotices } from "../api/notices";
 import type { Notice } from "../types/notices";
 import { formatDateTime } from "../utils/date";
+import { Loading } from "../components/Loading";
 
 /** 관리자 공지사항 목록 및 관리 페이지 */
 export function AdminNoticesPage() {
@@ -63,7 +64,7 @@ export function AdminNoticesPage() {
           </Link>
         </div>
 
-        {loading ? <p className="muted">불러오는 중...</p> : null}
+        {loading ? <Loading /> : null}
         {error ? <p className="error">{error}</p> : null}
         {message ? <p className="success">{message}</p> : null}
         {!loading && notices.length === 0 ? (
@@ -77,7 +78,7 @@ export function AdminNoticesPage() {
                 <strong>{notice.title}</strong>
                 <p>
                   {formatDateTime(notice.created_at)}
-                  {notice.event_start ? " · 일정 공지" : ""}
+                  {notice.image_url ? " · 이미지 첨부" : ""}
                 </p>
               </div>
               <div className="admin-notice-actions">

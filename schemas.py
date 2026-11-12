@@ -7,10 +7,10 @@
   - ORM 객체를 스키마로 변환할 때는 model_config = ConfigDict(from_attributes=True)를 사용합니다.
 """
 
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import List, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
 
 class MemberSignupRequest(BaseModel):
@@ -88,6 +88,17 @@ class MemberSignupRequest(BaseModel):
         description="동아리 들어와서 해보고 싶은 활동",
         examples=["동아리 웹사이트 제작과 스터디 운영에 참여하고 싶습니다."],
     )
+    privacy_agreed: Literal[True] = Field(
+        ...,
+        description="개인정보 수집·이용 동의 (반드시 true)",
+        examples=[True],
+    )
+
+
+class AccountDeleteRequest(BaseModel):
+    """회원 탈퇴 요청. 본인 확인을 위해 현재 비밀번호를 다시 받습니다."""
+
+    password: str = Field(..., min_length=1, max_length=64, description="현재 비밀번호")
 
 
 class MemberLoginRequest(BaseModel):
@@ -415,6 +426,7 @@ class ProjectCreateRequest(BaseModel):
         description="분류 (project / study)",
         examples=["project"],
     )
+    is_recruiting: bool = Field(default=False, description="팀원 모집 중 여부 (가입 신청 허용)")
 
 
 class ProjectUpdateRequest(BaseModel):
@@ -448,6 +460,7 @@ class ProjectUpdateRequest(BaseModel):
         description="분류 (project / study)",
         examples=["study"],
     )
+    is_recruiting: Optional[bool] = Field(default=None, description="팀원 모집 중 여부")
 
 
 class ActivityMemberSummary(BaseModel):
@@ -468,6 +481,52 @@ class ActivityMembershipResponse(BaseModel):
     member: ActivityMemberSummary
 
 
+class ActivityMemberDetail(ActivityMemberSummary):
+    """멤버 관리 화면용 회원 정보 (학과·학년 포함)."""
+
+    department: str
+    grade: int
+
+
+class ActivityMembershipManageResponse(BaseModel):
+    """멤버 관리 화면용 멤버십 (가입 신청 대기 포함)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    role: Literal["leader", "member"]
+    status: Literal["pending", "approved"]
+    created_at: datetime
+    member: ActivityMemberDetail
+
+
+class ActivityMembershipListResponse(BaseModel):
+    total: int
+    items: List[ActivityMembershipManageResponse]
+
+
+class ActivityMemberAddRequest(BaseModel):
+    """리더·관리자가 회원을 직접 추가하는 요청."""
+
+    member_public_id: str = Field(..., description="추가할 회원 public_id")
+    role: Literal["leader", "member"] = Field(default="member", description="역할")
+
+
+class ActivityMemberUpdateRequest(BaseModel):
+    """역할 변경(리더 임명·해제) 또는 가입 신청 승인."""
+
+    role: Optional[Literal["leader", "member"]] = Field(default=None, description="역할")
+    status: Optional[Literal["approved"]] = Field(default=None, description="approved 로 보내면 가입 승인")
+
+
+class MyActivityMembershipResponse(BaseModel):
+    """로그인한 회원 기준 이 활동에서의 상태."""
+
+    status: Literal["none", "pending", "approved"]
+    role: Optional[Literal["leader", "member"]] = None
+    can_manage: bool = Field(description="멤버 관리 가능 여부 (사이트 관리자 또는 이 활동의 리더)")
+    can_appoint: bool = Field(description="리더 임명 가능 여부 (사이트 관리자)")
+
+
 class ProjectResponse(BaseModel):
     """프로젝트 응답 스키마. 내부 id는 노출하지 않습니다."""
 
@@ -481,9 +540,12 @@ class ProjectResponse(BaseModel):
     category: str = Field(description="분류")
     created_at: datetime = Field(description="생성 시각")
     updated_at: datetime = Field(description="수정 시각")
+    is_recruiting: bool = Field(default=False, description="팀원 모집 중 여부 (가입 신청 가능)")
     memberships: List[ActivityMembershipResponse] = Field(
         default_factory=list,
-        description="프로젝트장과 참여 회원",
+        # 가입 신청 대기(pending)는 공개 응답에서 제외합니다.
+        validation_alias="approved_memberships",
+        description="프로젝트장과 참여 회원 (확정된 멤버만)",
     )
 
 
@@ -612,22 +674,6 @@ class NoticeCreateRequest(BaseModel):
         description="공지 내용",
         examples=["이번 주 금요일 저녁 7시에 정기 모임이 있습니다."],
     )
-    event_start: Optional[datetime] = Field(
-        default=None,
-        description="행사 시작 시각 (일정 공지일 때만)",
-        examples=["2026-03-15T10:00:00+09:00"],
-    )
-    event_end: Optional[datetime] = Field(
-        default=None,
-        description="행사 종료 시각 (일정 공지일 때만)",
-        examples=["2026-03-15T18:00:00+09:00"],
-    )
-    location: Optional[str] = Field(
-        default=None,
-        max_length=200,
-        description="행사 장소 (일정 공지일 때만)",
-        examples=["학생회관 301호"],
-    )
 
 
 class NoticeUpdateRequest(BaseModel):
@@ -644,22 +690,6 @@ class NoticeUpdateRequest(BaseModel):
         description="공지 내용",
         examples=["시간이 저녁 8시로 변경되었습니다."],
     )
-    event_start: Optional[datetime] = Field(
-        default=None,
-        description="행사 시작 시각",
-        examples=["2026-03-15T10:00:00+09:00"],
-    )
-    event_end: Optional[datetime] = Field(
-        default=None,
-        description="행사 종료 시각",
-        examples=["2026-03-15T18:00:00+09:00"],
-    )
-    location: Optional[str] = Field(
-        default=None,
-        max_length=200,
-        description="행사 장소",
-        examples=["학생회관 301호"],
-    )
 
 
 class NoticeResponse(BaseModel):
@@ -671,9 +701,7 @@ class NoticeResponse(BaseModel):
     title: str = Field(description="공지 제목")
     content: str = Field(description="공지 내용")
     is_pinned: bool = Field(description="상단 고정 여부 (기능은 추후 구현)")
-    event_start: Optional[datetime] = Field(default=None, description="행사 시작 시각")
-    event_end: Optional[datetime] = Field(default=None, description="행사 종료 시각")
-    location: Optional[str] = Field(default=None, description="행사 장소")
+    image_url: Optional[str] = Field(default=None, description="첨부 이미지 URL")
     created_at: datetime = Field(description="생성 시각")
     updated_at: datetime = Field(description="수정 시각")
     created_by_name: Optional[str] = Field(default=None, description="작성자 이름 (탈퇴 시 null)")
@@ -689,23 +717,51 @@ class NoticeListResponse(BaseModel):
 
 # ─── 캘린더(Calendar) 스키마 ───────────────────────────────────────────────────
 
+class CalendarEventCreateRequest(BaseModel):
+    """일정 등록 요청."""
+
+    title: str = Field(..., min_length=1, max_length=100, description="일정 제목", examples=["정기 발표회"])
+    description: Optional[str] = Field(default=None, description="일정 설명")
+    event_start: datetime = Field(..., description="시작 시각", examples=["2026-03-15T19:00:00+09:00"])
+    event_end: Optional[datetime] = Field(default=None, description="종료 시각")
+    location: Optional[str] = Field(default=None, max_length=200, description="장소", examples=["학생회관 423호"])
+
+
+class CalendarEventUpdateRequest(BaseModel):
+    """일정 부분 수정 요청. 보낸 필드만 수정합니다 (description/event_end/location은 null로 지울 수 있음)."""
+
+    title: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    description: Optional[str] = None
+    event_start: Optional[datetime] = None
+    event_end: Optional[datetime] = None
+    location: Optional[str] = Field(default=None, max_length=200)
+
+
 class CalendarEventResponse(BaseModel):
-    """캘린더용 일정 응답. Notice 중 event_start가 있는 항목만 사용합니다."""
+    """캘린더 일정 응답."""
 
     model_config = ConfigDict(from_attributes=True)
 
-    public_id: str = Field(description="공지 public_id (UUID)")
-    title: str = Field(description="일정/공지 제목")
-    content: str = Field(description="공지 내용")
-    event_start: datetime = Field(description="행사 시작 시각")
-    event_end: Optional[datetime] = Field(default=None, description="행사 종료 시각")
-    location: Optional[str] = Field(default=None, description="행사 장소")
+    public_id: str = Field(description="일정 public_id (UUID)")
+    title: str = Field(description="일정 제목")
+    description: Optional[str] = Field(default=None, description="일정 설명")
+    event_start: datetime = Field(description="시작 시각")
+    event_end: Optional[datetime] = Field(default=None, description="종료 시각")
+    location: Optional[str] = Field(default=None, description="장소")
+
+    @field_validator("event_start", "event_end")
+    @classmethod
+    def _assume_utc(cls, value: Optional[datetime]) -> Optional[datetime]:
+        """SQLite는 시간대 없이 돌려주므로 UTC로 표시해 브라우저가 올바른 현지 시각으로 바꾸게 합니다."""
+        if value is not None and value.tzinfo is None:
+            return value.replace(tzinfo=timezone.utc)
+        return value
 
 
 class CalendarListResponse(BaseModel):
     """캘린더 일정 목록 응답 스키마."""
 
-    total: int = Field(description="일정 있는 공지 수")
+    total: int = Field(description="일정 수")
     items: List[CalendarEventResponse] = Field(description="캘린더 일정 목록")
 
 

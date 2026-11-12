@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from pagination import Page, PageParams, paginate
 from models import (
     ActivityMembershipDB,
+    CalendarEventDB,
     ContactInquiryDB,
     FaqDB,
     GalleryAlbumDB,
@@ -428,18 +429,142 @@ def delete_notice(db: Session, public_id: str) -> Optional[NoticeDB]:
     return notice
 
 
-def get_calendar_events(db: Session) -> List[NoticeDB]:
-    """
-    캘린더용 일정을 반환합니다.
+# ─── 일정(캘린더) CRUD ────────────────────────────────────────────────────────
 
-    event_start가 있는 Notice만 포함하며, event_start 오름차순(가까운 일정 순)으로 정렬합니다.
-    """
+def get_calendar_events(db: Session) -> List[CalendarEventDB]:
+    """일정 전체를 시작 시각 오름차순으로 반환합니다."""
     return (
-        db.query(NoticeDB)
-        .filter(NoticeDB.event_start.isnot(None))
-        .order_by(NoticeDB.event_start.asc())
+        db.query(CalendarEventDB)
+        .order_by(CalendarEventDB.event_start.asc(), CalendarEventDB.id.asc())
         .all()
     )
+
+
+def get_calendar_event_by_public_id(db: Session, public_id: str) -> Optional[CalendarEventDB]:
+    return db.query(CalendarEventDB).filter(CalendarEventDB.public_id == public_id).first()
+
+
+def create_calendar_event(db: Session, data: dict) -> CalendarEventDB:
+    event = CalendarEventDB(**data)
+    db.add(event)
+    db.commit()
+    db.refresh(event)
+    return event
+
+
+def update_calendar_event(db: Session, public_id: str, updates: dict) -> Optional[CalendarEventDB]:
+    event = get_calendar_event_by_public_id(db, public_id)
+    if event is None:
+        return None
+    for field, value in updates.items():
+        setattr(event, field, value)
+    db.commit()
+    db.refresh(event)
+    return event
+
+
+def delete_calendar_event(db: Session, public_id: str) -> Optional[CalendarEventDB]:
+    event = get_calendar_event_by_public_id(db, public_id)
+    if event is None:
+        return None
+    db.delete(event)
+    db.commit()
+    return event
+
+
+# ─── 프로젝트·스터디 멤버십 ────────────────────────────────────────────────────
+
+def get_activity_by_kind(db: Session, kind: str, public_id: str) -> Optional[ProjectDB]:
+    """kind(projects/studies)에 맞는 활동만 찾습니다."""
+    category = "project" if kind == "projects" else "study"
+    return (
+        db.query(ProjectDB)
+        .filter(ProjectDB.public_id == public_id, ProjectDB.category == category)
+        .first()
+    )
+
+
+def get_activity_membership(
+    db: Session, activity_id: int, member_id: int
+) -> Optional[ActivityMembershipDB]:
+    return (
+        db.query(ActivityMembershipDB)
+        .filter(
+            ActivityMembershipDB.activity_id == activity_id,
+            ActivityMembershipDB.member_id == member_id,
+        )
+        .first()
+    )
+
+
+def add_activity_membership(
+    db: Session,
+    activity: ProjectDB,
+    member: MemberDB,
+    role: str = "member",
+    status: str = "approved",
+) -> ActivityMembershipDB:
+    membership = ActivityMembershipDB(
+        activity_id=activity.id,
+        member_id=member.id,
+        role=role,
+        status=status,
+    )
+    db.add(membership)
+    db.commit()
+    db.refresh(membership)
+    return membership
+
+
+def update_activity_membership(
+    db: Session, membership: ActivityMembershipDB, updates: dict
+) -> ActivityMembershipDB:
+    for field, value in updates.items():
+        setattr(membership, field, value)
+    db.commit()
+    db.refresh(membership)
+    return membership
+
+
+def delete_activity_membership(db: Session, membership: ActivityMembershipDB) -> None:
+    db.delete(membership)
+    db.commit()
+
+
+# ─── 회원 탈퇴 ─────────────────────────────────────────────────────────────────
+
+def withdraw_member(db: Session, member: MemberDB) -> None:
+    """
+    회원 탈퇴: 회원 행을 삭제해 개인정보를 즉시 파기합니다.
+
+    - 로그인 유지 토큰, 프로젝트·스터디 참여 기록은 함께 삭제됩니다 (CASCADE).
+    - 작성한 공지·FAQ·일정·갤러리 사진은 동아리 기록으로 남기고 작성자 연결만 비웁니다.
+      (SQLite처럼 FK가 강제되지 않는 환경도 고려해 명시적으로 NULL 처리합니다.)
+    """
+    member_id = member.id
+    db.query(NoticeDB).filter(NoticeDB.created_by_id == member_id).update(
+        {NoticeDB.created_by_id: None}, synchronize_session=False
+    )
+    db.query(NoticeDB).filter(NoticeDB.updated_by_id == member_id).update(
+        {NoticeDB.updated_by_id: None}, synchronize_session=False
+    )
+    db.query(FaqDB).filter(FaqDB.created_by_id == member_id).update(
+        {FaqDB.created_by_id: None}, synchronize_session=False
+    )
+    db.query(FaqDB).filter(FaqDB.updated_by_id == member_id).update(
+        {FaqDB.updated_by_id: None}, synchronize_session=False
+    )
+    db.query(CalendarEventDB).filter(CalendarEventDB.created_by_id == member_id).update(
+        {CalendarEventDB.created_by_id: None}, synchronize_session=False
+    )
+    db.query(GalleryDB).filter(GalleryDB.uploaded_by == member_id).update(
+        {GalleryDB.uploaded_by: None}, synchronize_session=False
+    )
+    db.query(RefreshTokenDB).filter(RefreshTokenDB.member_id == member_id).delete(
+        synchronize_session=False
+    )
+    db.delete(member)
+    db.commit()
 
 
 # ─── 갤러리 CRUD ─────────────────────────────────────────────────────────────

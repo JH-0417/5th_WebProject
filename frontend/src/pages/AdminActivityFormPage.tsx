@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { createActivity, updateActivity } from "../api/admin";
 import { fetchActivity } from "../api/activities";
 import type { Activity, ActivityKind } from "../types/activities";
+import { Loading } from "../components/Loading";
 
 type AdminActivityFormPageProps = {
   kind: ActivityKind;
@@ -21,6 +22,7 @@ export function AdminActivityFormPage({
   const [description, setDescription] = useState("");
   const [techStack, setTechStack] = useState("");
   const [status, setStatus] = useState<Activity["status"]>("planned");
+  const [isRecruiting, setIsRecruiting] = useState(false);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +40,7 @@ export function AdminActivityFormPage({
         setDescription(item.description);
         setTechStack(item.tech_stack ?? "");
         setStatus(item.status);
+        setIsRecruiting(item.is_recruiting);
       } catch (err) {
         if (!cancelled) {
           setError(
@@ -67,6 +70,7 @@ export function AdminActivityFormPage({
       description: description.trim(),
       tech_stack: techStack.trim() || null,
       status,
+      is_recruiting: isRecruiting,
     };
 
     try {
@@ -86,7 +90,7 @@ export function AdminActivityFormPage({
     return (
       <main className="page">
         <section className="card card-wide">
-          <p className="muted">불러오는 중...</p>
+          <Loading />
         </section>
       </main>
     );
@@ -142,6 +146,21 @@ export function AdminActivityFormPage({
               <option value="in_progress">진행 중</option>
               <option value="completed">완료</option>
             </select>
+          </label>
+
+          <label className="checkbox-field">
+            <input
+              type="checkbox"
+              checked={isRecruiting}
+              onChange={(event) => setIsRecruiting(event.target.checked)}
+            />
+            <span>
+              <strong>멤버 모집 중</strong>
+              <small>
+                체크하면 회원이 상세 페이지에서 가입 신청할 수 있습니다. 멤버
+                추가·리더 임명은 저장 후 상세 페이지에서 관리합니다.
+              </small>
+            </span>
           </label>
 
           {error ? <p className="error">{error}</p> : null}

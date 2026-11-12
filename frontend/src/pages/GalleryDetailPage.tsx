@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { fetchGalleryItem } from "../api/gallery";
 import type { GalleryItem } from "../types/gallery";
 import { formatDateTime } from "../utils/date";
+import { Loading } from "../components/Loading";
 
 /** 공개 갤러리 상세 페이지 */
 export function GalleryDetailPage() {
@@ -47,7 +48,7 @@ export function GalleryDetailPage() {
   return (
     <main className="page">
       <article className="card card-gallery-detail card-read">
-        {loading ? <p className="muted">불러오는 중...</p> : null}
+        {loading ? <Loading /> : null}
         {error ? <p className="error">{error}</p> : null}
 
         {item ? (

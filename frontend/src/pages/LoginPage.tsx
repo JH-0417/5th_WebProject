@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { login, saveAccessToken } from "../api/auth";
 
 /**
@@ -13,6 +13,10 @@ import { login, saveAccessToken } from "../api/auth";
  */
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // 다른 페이지에서 "로그인하고 ~하기"로 왔다면 로그인 후 그 페이지로 돌려보냅니다.
+  const from = (location.state as { from?: string } | null)?.from;
+  const redirectTo = from && from.startsWith("/") && from !== "/login" ? from : "/mypage";
   const [loginId, setLoginId] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +34,7 @@ export function LoginPage() {
       });
       saveAccessToken(result.access_token);
       // 로그인 성공 → 마이페이지로 이동
-      navigate("/mypage", { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "로그인에 실패했습니다.";

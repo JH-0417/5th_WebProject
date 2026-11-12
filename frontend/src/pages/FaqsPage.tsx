@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchFaqs } from "../api/faqs";
 import type { Faq } from "../types/faqs";
+import { Loading } from "../components/Loading";
 
 /** 공개 FAQ 목록 페이지 */
 export function FaqsPage() {
@@ -41,7 +42,7 @@ export function FaqsPage() {
           궁금한 질문을 선택하면 답변을 확인할 수 있습니다.
         </p>
 
-        {loading ? <p className="muted">불러오는 중...</p> : null}
+        {loading ? <Loading /> : null}
         {error ? <p className="error">{error}</p> : null}
         {!loading && !error && faqs.length === 0 ? (
           <p className="muted">등록된 FAQ가 없습니다.</p>

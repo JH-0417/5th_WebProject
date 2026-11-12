@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { fetchActivities } from "../api/activities";
 import type { Activity, ActivityKind } from "../types/activities";
 import { formatDateTime } from "../utils/date";
+import { Loading } from "../components/Loading";
 
 type ActivityListPageProps = {
   kind: ActivityKind;
@@ -62,7 +63,7 @@ export function ActivityListPage({ kind }: ActivityListPageProps) {
           동아리에서 운영하는 {label.title}를 확인하세요.
         </p>
 
-        {loading ? <p className="muted">불러오는 중...</p> : null}
+        {loading ? <Loading /> : null}
         {error ? <p className="error">{error}</p> : null}
         {!loading && !error && items.length === 0 ? (
           <p className="muted">등록된 {label.singular}가 없습니다.</p>
@@ -77,13 +78,20 @@ export function ActivityListPage({ kind }: ActivityListPageProps) {
               >
                 <div className="activity-card-header">
                   <strong>{item.title}</strong>
-                  <span className={`status-badge status-${item.status}`}>
-                    {statusLabels[item.status]}
-                  </span>
+                  <div className="activity-card-badges">
+                    {item.is_recruiting && item.status !== "completed" ? (
+                      <span className="status-badge status-recruiting">모집 중</span>
+                    ) : null}
+                    <span className={`status-badge status-${item.status}`}>
+                      {statusLabels[item.status]}
+                    </span>
+                  </div>
                 </div>
                 <p className="activity-description">{item.description}</p>
                 <div className="activity-meta">
-                  <span>{item.tech_stack || "기술 스택 미등록"}</span>
+                  <span>
+                    {item.tech_stack || "기술 스택 미등록"} · 멤버 {item.memberships.length}명
+                  </span>
                   <time dateTime={item.created_at}>
                     {formatDateTime(item.created_at)}
                   </time>

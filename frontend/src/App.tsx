@@ -4,6 +4,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { SiteFooter } from "./components/SiteFooter";
 import { SiteHeader } from "./components/SiteHeader";
 import { AdminActivitiesPage } from "./pages/AdminActivitiesPage";
+import { AdminCalendarPage } from "./pages/AdminCalendarPage";
 import { AdminActivityFormPage } from "./pages/AdminActivityFormPage";
 import { AdminFaqsPage } from "./pages/AdminFaqsPage";
 import { AdminGalleryPage } from "./pages/AdminGalleryPage";
@@ -23,6 +24,7 @@ import { LoginPage } from "./pages/LoginPage";
 import { MembersPage } from "./pages/MembersPage";
 import { NoticeDetailPage } from "./pages/NoticeDetailPage";
 import { NoticesPage } from "./pages/NoticesPage";
+import { PrivacyPage } from "./pages/PrivacyPage";
 import { ProfileEditPage } from "./pages/ProfileEditPage";
 import { SignupPage } from "./pages/SignupPage";
 import { useScrollReveal } from "./utils/useScrollReveal";
@@ -220,6 +222,17 @@ function App() {
         <Route path="/gallery/:publicId" element={<GalleryDetailPage />} />
         <Route path="/faqs" element={<FaqsPage />} />
         <Route path="/calendar" element={<CalendarPage />} />
+        <Route
+          path="/admin/calendar"
+          element={
+            <ProtectedRoute>
+              <AdminRoute>
+                <AdminCalendarPage />
+              </AdminRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

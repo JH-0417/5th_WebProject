@@ -123,6 +123,11 @@ class ProjectDB(Base):
         order_by="ActivityMembershipDB.id",
     )
 
+    @property
+    def approved_memberships(self) -> List["ActivityMembershipDB"]:
+        """공개 화면에 보여줄 확정 멤버 (가입 신청 대기 중인 회원 제외)."""
+        return [m for m in self.memberships if m.status == "approved"]
+
 
 class ActivityMembershipDB(Base):
     """프로젝트·스터디마다 회원이 맡은 역할을 저장하는 연결 테이블."""
@@ -147,6 +152,12 @@ class ActivityMembershipDB(Base):
         Enum("leader", "member", name="activity_membership_role"),
         default="member",
     )
+    # 회원이 직접 가입 신청하면 pending, 리더·관리자가 승인하거나 직접 추가하면 approved
+    status: Mapped[str] = mapped_column(
+        Enum("pending", "approved", name="activity_membership_status"),
+        default="approved",
+        server_default="approved",
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=utc_now,
@@ -167,7 +178,8 @@ class NoticeDB(Base):
     title: Mapped[str] = mapped_column(String(100))
     content: Mapped[str] = mapped_column(Text)
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False)
-    # 일정 공지일 때만 사용 (일반 공지는 null)
+    image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)  # 공지 첨부 이미지 (Cloudinary)
+    # [사용 중단] 일정은 calendar_events 테이블로 분리했습니다. 기존 데이터 보존용으로만 남겨둡니다.
     event_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     event_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     location: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
@@ -203,6 +215,38 @@ class NoticeDB(Base):
     @property
     def updated_by_name(self) -> Optional[str]:
         return self.updated_by.name if self.updated_by else None
+
+
+# ─── 일정 (캘린더) ───────────────────────────────────────────────────────
+
+class CalendarEventDB(Base):
+    """동아리 일정. 공지사항과 분리해 관리자가 따로 등록·수정합니다."""
+
+    __tablename__ = "calendar_events"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, default=generate_uuid)
+    title: Mapped[str] = mapped_column(String(100))
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    event_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    event_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    location: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
+        server_default=func.now(),
+    )
+    created_by_id: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        ForeignKey("members.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
 
 # ─── 갤러리 ───────────────────────────────────────────────────────────

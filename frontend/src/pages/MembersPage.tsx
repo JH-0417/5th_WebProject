@@ -10,6 +10,7 @@ import type {
   MemberCard,
   SystemRole,
 } from "../types/members";
+import { Loading } from "../components/Loading";
 
 type ColumnCount = 1 | 2 | 4;
 
@@ -177,7 +178,7 @@ export function MembersPage() {
           </div>
         </div>
 
-        {loading ? <p className="muted">멤버를 불러오는 중...</p> : null}
+        {loading ? <Loading label="멤버를 불러오는 중" /> : null}
         {error ? <p className="error">{error}</p> : null}
         {message ? <p className="success">{message}</p> : null}
 
