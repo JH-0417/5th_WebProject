@@ -4,6 +4,7 @@ import { deleteActivity } from "../api/admin";
 import { fetchActivities } from "../api/activities";
 import type { Activity, ActivityKind } from "../types/activities";
 import { statusLabels } from "./ActivityListPage";
+import { Loading } from "../components/Loading";
 
 type AdminActivitiesPageProps = {
   kind: ActivityKind;
@@ -93,7 +94,7 @@ export function AdminActivitiesPage({ kind }: AdminActivitiesPageProps) {
           </Link>
         </div>
 
-        {loading ? <p className="muted">불러오는 중...</p> : null}
+        {loading ? <Loading /> : null}
         {error ? <p className="error">{error}</p> : null}
         {message ? <p className="success">{message}</p> : null}
         {!loading && items.length === 0 ? (

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchCalendarEvents } from "../api/calendar";
+import { EventDetailDialog } from "../components/EventDetailDialog";
 import type { CalendarEvent } from "../types/calendar";
+import { Loading } from "../components/Loading";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -40,6 +42,7 @@ export function CalendarPage() {
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +88,14 @@ export function CalendarPage() {
   }).format(currentMonth);
   const todayKey = dateKey(today);
 
+  // 오늘 이후(진행 중 포함) 가까운 일정 5개
+  const upcoming = useMemo(() => {
+    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    return events
+      .filter((event) => new Date(event.event_end ?? event.event_start) >= startOfToday)
+      .slice(0, 5);
+  }, [events, today]);
+
   function moveMonth(offset: number) {
     setCurrentMonth(
       (month) => new Date(month.getFullYear(), month.getMonth() + offset, 1),
@@ -101,7 +112,7 @@ export function CalendarPage() {
         <div className="calendar-header">
           <div>
             <h1>동아리 일정</h1>
-            <p className="subtitle">공지사항에 등록된 일정을 확인하세요.</p>
+            <p className="subtitle">동아리 행사와 모임 일정을 확인하세요.</p>
           </div>
           <div className="calendar-navigation" aria-label="월 이동">
             <button
@@ -128,7 +139,7 @@ export function CalendarPage() {
 
         <h2 className="calendar-month-title">{monthTitle}</h2>
 
-        {loading ? <p className="muted">불러오는 중...</p> : null}
+        {loading ? <Loading /> : null}
         {error ? <p className="error">{error}</p> : null}
         {!loading && !error && events.length === 0 ? (
           <p className="muted">등록된 일정이 없습니다.</p>
@@ -162,19 +173,19 @@ export function CalendarPage() {
                   <span className="calendar-day-number">{day.getDate()}</span>
                   <div className="calendar-events">
                     {dayEvents.map((event) => (
-                      <Link
+                      <button
+                        type="button"
                         key={event.public_id}
-                        to={`/notices/${event.public_id}`}
-                        state={{ from: "/calendar" }}
                         className="calendar-event"
                         title={`${event.title}${event.location ? ` · ${event.location}` : ""}`}
+                        onClick={() => setSelectedEvent(event)}
                       >
                         <time dateTime={event.event_start}>
                           {formatEventTime(event.event_start)}
                         </time>
                         <strong>{event.title}</strong>
                         {event.location ? <span>{event.location}</span> : null}
-                      </Link>
+                      </button>
                     ))}
                   </div>
                 </section>
@@ -183,10 +194,45 @@ export function CalendarPage() {
           </div>
         </div>
 
+        {upcoming.length > 0 ? (
+          <section className="upcoming-events" aria-label="다가오는 일정">
+            <h2>다가오는 일정</h2>
+            <ul>
+              {upcoming.map((event) => {
+                const start = new Date(event.event_start);
+                return (
+                  <li key={event.public_id}>
+                    <button type="button" onClick={() => setSelectedEvent(event)}>
+                      <span className="upcoming-date">
+                        <b>{start.getDate()}</b>
+                        <small>{start.getMonth() + 1}월 · {WEEKDAYS[start.getDay()]}</small>
+                      </span>
+                      <span className="upcoming-body">
+                        <strong>{event.title}</strong>
+                        <small>
+                          {formatEventTime(event.event_start)}
+                          {event.location ? ` · ${event.location}` : ""}
+                        </small>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ) : null}
+
         <p className="switch-link">
           <Link to="/">홈으로 돌아가기</Link>
         </p>
       </section>
+
+      {selectedEvent ? (
+        <EventDetailDialog
+          event={selectedEvent}
+          onClose={() => setSelectedEvent(null)}
+        />
+      ) : null}
     </main>
   );
 }

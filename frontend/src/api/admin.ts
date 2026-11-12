@@ -19,6 +19,11 @@ import type {
   ActivityManageRequest,
 } from "../types/activities";
 import type { GalleryItem } from "../types/gallery";
+import type {
+  CalendarEvent,
+  CalendarEventCreateRequest,
+  CalendarEventUpdateRequest,
+} from "../types/calendar";
 import type { Faq, FaqCreateRequest } from "../types/faqs";
 import type {
   Recruitment,
@@ -138,6 +143,70 @@ export function updateNotice(
 export function deleteNotice(publicId: string): Promise<{ message: string }> {
   return apiRequest<{ message: string }>(
     `/admin/notices/${encodeURIComponent(publicId)}`,
+    {
+      method: "DELETE",
+      headers: authHeaders(),
+    },
+  );
+}
+
+/** PUT /admin/notices/{public_id}/image — 공지 첨부 이미지 등록·교체 */
+export function uploadNoticeImage(publicId: string, file: File): Promise<Notice> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return apiRequest<Notice>(
+    `/admin/notices/${encodeURIComponent(publicId)}/image`,
+    {
+      method: "PUT",
+      headers: authHeaders(),
+      body: formData,
+    },
+  );
+}
+
+/** DELETE /admin/notices/{public_id}/image — 공지 첨부 이미지 삭제 */
+export function deleteNoticeImage(publicId: string): Promise<Notice> {
+  return apiRequest<Notice>(
+    `/admin/notices/${encodeURIComponent(publicId)}/image`,
+    {
+      method: "DELETE",
+      headers: authHeaders(),
+    },
+  );
+}
+
+/** POST /admin/calendar — 일정 등록 */
+export function createCalendarEvent(
+  payload: CalendarEventCreateRequest,
+): Promise<CalendarEvent> {
+  return apiRequest<CalendarEvent>("/admin/calendar", {
+    method: "POST",
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+}
+
+/** PATCH /admin/calendar/{public_id} — 일정 수정 */
+export function updateCalendarEvent(
+  publicId: string,
+  payload: CalendarEventUpdateRequest,
+): Promise<CalendarEvent> {
+  return apiRequest<CalendarEvent>(
+    `/admin/calendar/${encodeURIComponent(publicId)}`,
+    {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    },
+  );
+}
+
+/** DELETE /admin/calendar/{public_id} — 일정 삭제 */
+export function deleteCalendarEvent(
+  publicId: string,
+): Promise<{ message: string }> {
+  return apiRequest<{ message: string }>(
+    `/admin/calendar/${encodeURIComponent(publicId)}`,
     {
       method: "DELETE",
       headers: authHeaders(),

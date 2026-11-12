@@ -28,6 +28,8 @@ export function SignupPage() {
   // 지원 문항 2개 (백엔드 apply_reason, desired_activity)
   const [applyReason, setApplyReason] = useState("");
   const [desiredActivity, setDesiredActivity] = useState("");
+  // 개인정보 수집·이용 동의 (필수)
+  const [privacyAgreed, setPrivacyAgreed] = useState(false);
 
   // --- 화면 상태 ---
   const [error, setError] = useState<string | null>(null); // 실패 메시지
@@ -55,6 +57,7 @@ export function SignupPage() {
         email,
         apply_reason: applyReason,
         desired_activity: desiredActivity,
+        privacy_agreed: privacyAgreed,
       });
       // 예: "가입 신청이 완료되었습니다. 면접 및 승인 완료 후 이용 가능합니다."
       setSuccessMessage(result.message);
@@ -215,10 +218,52 @@ export function SignupPage() {
               />
             </label>
 
+            {/* 개인정보 수집·이용 동의 (필수) */}
+            <div className="consent-box">
+              <strong>개인정보 수집·이용 동의 (필수)</strong>
+              <dl>
+                <div>
+                  <dt>수집 항목</dt>
+                  <dd>
+                    아이디, 비밀번호(암호화 저장), 이름, 학번, 학과, 학년,
+                    휴대폰 번호, 이메일, 지원 사유, 희망 활동
+                  </dd>
+                </div>
+                <div>
+                  <dt>이용 목적</dt>
+                  <dd>가입 심사, 회원 관리, 동아리 활동 안내</dd>
+                </div>
+                <div>
+                  <dt>보유 기간</dt>
+                  <dd>
+                    회원 탈퇴 시 즉시 삭제 · 가입이 거절된 경우 지체 없이 삭제
+                  </dd>
+                </div>
+              </dl>
+              <p>
+                동의하지 않을 수 있으나, 동의하지 않으면 가입 신청을 할 수
+                없습니다.{" "}
+                <Link to="/privacy" target="_blank" rel="noreferrer">
+                  개인정보 처리방침 전문 보기
+                </Link>
+              </p>
+              <label className="checkbox-field">
+                <input
+                  type="checkbox"
+                  checked={privacyAgreed}
+                  onChange={(e) => setPrivacyAgreed(e.target.checked)}
+                  required
+                />
+                <span>
+                  <strong>위 내용을 확인했으며 개인정보 수집·이용에 동의합니다.</strong>
+                </span>
+              </label>
+            </div>
+
             {/* error 가 있을 때만 빨간 문구 표시 (삼항 연산자) */}
             {error ? <p className="error">{error}</p> : null}
 
-            <button type="submit" disabled={loading}>
+            <button type="submit" disabled={loading || !privacyAgreed}>
               {loading ? "신청 중..." : "가입 신청하기"}
             </button>
           </form>

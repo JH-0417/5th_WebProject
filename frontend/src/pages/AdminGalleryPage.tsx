@@ -9,6 +9,7 @@ import {
 import { fetchGallery } from "../api/gallery";
 import type { GalleryItem } from "../types/gallery";
 import { formatDateTime } from "../utils/date";
+import { Loading } from "../components/Loading";
 
 const MAX_FILE_SIZE = 8 * 1024 * 1024;
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -201,7 +202,7 @@ export function AdminGalleryPage() {
         {message ? (
           <p className="success admin-gallery-feedback">{message}</p>
         ) : null}
-        {loading ? <p className="muted">불러오는 중...</p> : null}
+        {loading ? <Loading /> : null}
         {!loading && items.length === 0 ? (
           <p className="muted">등록된 사진이 없습니다.</p>
         ) : null}

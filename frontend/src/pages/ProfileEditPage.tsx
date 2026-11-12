@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { clearAccessToken, fetchMe } from "../api/auth";
 import { changeMyPassword, updateMyProfile } from "../api/members";
+import { Loading } from "../components/Loading";
 
 /**
  * 마이페이지 수정 화면
@@ -119,7 +120,7 @@ export function ProfileEditPage() {
     return (
       <main className="page">
         <section className="card card-wide">
-          <p className="muted">불러오는 중...</p>
+          <Loading />
         </section>
       </main>
     );

@@ -11,6 +11,7 @@ require_admin 의존성을 사용하여 관리자 권한을 검사합니다.
 최고관리자 계정은 본인 외에는 아무도 바꿀 수 없습니다.
 """
 
+from datetime import timezone
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
@@ -19,6 +20,11 @@ from sqlalchemy.orm import Session
 
 from crud import (
     count_members_by_system_role,
+    create_calendar_event,
+    delete_calendar_event,
+    get_calendar_event_by_public_id,
+    get_notice_by_public_id,
+    update_calendar_event,
     delete_contact_inquiry,
     get_contact_inquiries,
     set_contact_inquiry_resolved,
@@ -59,6 +65,9 @@ from dependencies import require_admin, require_owner
 from pagination import PageParams, page_params
 from models import MemberDB
 from schemas import (
+    CalendarEventCreateRequest,
+    CalendarEventResponse,
+    CalendarEventUpdateRequest,
     ContactListResponse,
     ContactResponse,
     ContactUpdateRequest,
@@ -95,7 +104,12 @@ from schemas import (
     StudyUpdateRequest,
 )
 from security import generate_temporary_password, hash_password
-from storage import delete_gallery_image, upload_gallery_image, validate_gallery_image
+from storage import (
+    delete_gallery_image,
+    upload_gallery_image,
+    upload_notice_image,
+    validate_gallery_image,
+)
 
 router = APIRouter(prefix="/admin", tags=["관리자"])
 
@@ -676,7 +690,148 @@ def remove_admin_notice(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="해당 공지사항을 찾을 수 없습니다.",
         )
+    if deleted.image_url:
+        delete_gallery_image(deleted.image_url)
     return {"message": "공지사항이 삭제되었습니다."}
+
+
+@router.put("/notices/{public_id}/image", response_model=NoticeResponse)
+async def upload_admin_notice_image(
+    public_id: str,
+    file: UploadFile = File(..., description="공지 첨부 이미지 (jpg/png/webp/gif, 8MB 이하)"),
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """
+    공지 첨부 이미지 등록·교체 API.
+
+    - Cloudinary에 업로드한 뒤 URL을 저장하고, 기존 이미지는 Cloudinary에서 지웁니다.
+    """
+    notice = get_notice_by_public_id(db, public_id)
+    if notice is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 공지사항을 찾을 수 없습니다.",
+        )
+    file_bytes = await file.read()
+    validate_gallery_image(file.content_type, len(file_bytes))
+    image_url = upload_notice_image(file_bytes)
+
+    old_image_url = notice.image_url
+    notice = update_notice(
+        db, public_id, {"image_url": image_url, "updated_by_id": current_member.id}
+    )
+    if old_image_url:
+        delete_gallery_image(old_image_url)
+    return NoticeResponse.model_validate(notice)
+
+
+@router.delete("/notices/{public_id}/image", response_model=NoticeResponse)
+def remove_admin_notice_image(
+    public_id: str,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """공지 첨부 이미지 삭제 API."""
+    notice = get_notice_by_public_id(db, public_id)
+    if notice is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 공지사항을 찾을 수 없습니다.",
+        )
+    old_image_url = notice.image_url
+    notice = update_notice(
+        db, public_id, {"image_url": None, "updated_by_id": current_member.id}
+    )
+    if old_image_url:
+        delete_gallery_image(old_image_url)
+    return NoticeResponse.model_validate(notice)
+
+
+# ─── 일정(캘린더) 관리 ─────────────────────────────────────────────────────────
+
+def _as_aware(value):
+    """SQLite는 시간대 정보 없이 돌려주므로 UTC로 간주해 비교 가능하게 맞춥니다."""
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
+
+
+def _to_utc_fields(data: dict) -> dict:
+    """일정 시각을 UTC로 바꿔 저장합니다. (SQLite는 시간대를 버리고 저장하므로 기준을 UTC로 통일)"""
+    for field in ("event_start", "event_end"):
+        value = data.get(field)
+        if value is not None:
+            data[field] = _as_aware(value).astimezone(timezone.utc)
+    return data
+
+
+def _check_event_range(event_start, event_end) -> None:
+    event_start, event_end = _as_aware(event_start), _as_aware(event_end)
+    if event_start is not None and event_end is not None and event_end < event_start:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="종료 시각은 시작 시각보다 빠를 수 없습니다.",
+        )
+
+
+@router.post(
+    "/calendar",
+    response_model=CalendarEventResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def create_admin_calendar_event(
+    payload: CalendarEventCreateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """관리자용 일정 등록 API."""
+    data = _to_utc_fields(payload.model_dump())
+    _check_event_range(data["event_start"], data["event_end"])
+    event = create_calendar_event(db, {**data, "created_by_id": current_member.id})
+    return CalendarEventResponse.model_validate(event)
+
+
+@router.patch("/calendar/{public_id}", response_model=CalendarEventResponse)
+def update_admin_calendar_event(
+    public_id: str,
+    payload: CalendarEventUpdateRequest,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """관리자용 일정 부분 수정 API. title·event_start 의 null 은 무시합니다."""
+    event = get_calendar_event_by_public_id(db, public_id)
+    if event is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 일정을 찾을 수 없습니다.",
+        )
+    updates = payload.model_dump(exclude_unset=True)
+    for field in ("title", "event_start"):
+        if field in updates and updates[field] is None:
+            updates.pop(field)
+    updates = _to_utc_fields(updates)
+    _check_event_range(
+        updates.get("event_start", event.event_start),
+        updates.get("event_end", event.event_end),
+    )
+    event = update_calendar_event(db, public_id, updates)
+    return CalendarEventResponse.model_validate(event)
+
+
+@router.delete("/calendar/{public_id}")
+def remove_admin_calendar_event(
+    public_id: str,
+    current_member: MemberDB = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """관리자용 일정 삭제 API."""
+    if delete_calendar_event(db, public_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="해당 일정을 찾을 수 없습니다.",
+        )
+    return {"message": "일정이 삭제되었습니다."}
 
 
 # ─── 갤러리 관리 ─────────────────────────────────────────────────────────────

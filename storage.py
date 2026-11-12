@@ -21,6 +21,7 @@ CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY")
 CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET")
 
 GALLERY_FOLDER = "5th_webproject/gallery"
+NOTICE_FOLDER = "5th_webproject/notices"
 ALLOWED_CONTENT_TYPES = {
     "image/jpeg",
     "image/png",
@@ -61,12 +62,22 @@ def validate_gallery_image(content_type: Optional[str], size: int) -> None:
 
 
 def upload_gallery_image(file_bytes: bytes) -> str:
-    """이미지 바이트를 Cloudinary에 업로드하고 secure_url을 반환합니다."""
+    """갤러리 사진을 Cloudinary에 업로드하고 secure_url을 반환합니다."""
+    return upload_image(file_bytes, GALLERY_FOLDER)
+
+
+def upload_notice_image(file_bytes: bytes) -> str:
+    """공지 첨부 이미지를 Cloudinary에 업로드하고 secure_url을 반환합니다."""
+    return upload_image(file_bytes, NOTICE_FOLDER)
+
+
+def upload_image(file_bytes: bytes, folder: str) -> str:
+    """이미지 바이트를 Cloudinary의 지정 폴더에 업로드하고 secure_url을 반환합니다."""
     _configure_cloudinary()
     try:
         result = cloudinary.uploader.upload(
             file_bytes,
-            folder=GALLERY_FOLDER,
+            folder=folder,
             resource_type="image",
         )
     except Exception as exc:

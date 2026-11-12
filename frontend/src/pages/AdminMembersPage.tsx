@@ -10,6 +10,7 @@ import type {
   ClubPosition,
   JoinStatusFilter,
 } from "../types/admin";
+import { Loading } from "../components/Loading";
 
 const POSITION_LABELS: Record<ClubPosition, string> = {
   president: "회장",
@@ -110,7 +111,7 @@ export function AdminMembersPage() {
           ))}
         </div>
 
-        {loading ? <p className="muted">불러오는 중...</p> : null}
+        {loading ? <Loading /> : null}
         {error ? <p className="error">{error}</p> : null}
         {message ? <p className="success">{message}</p> : null}
 

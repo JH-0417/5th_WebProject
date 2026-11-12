@@ -1,18 +1,16 @@
 import { useEffect, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { fetchNotice } from "../api/notices";
 import type { Notice } from "../types/notices";
 import { formatDateTime } from "../utils/date";
+import { Loading } from "../components/Loading";
 
 /** 공개 공지사항 상세 페이지 */
 export function NoticeDetailPage() {
   const { publicId } = useParams<{ publicId: string }>();
-  const location = useLocation();
   const [notice, setNotice] = useState<Notice | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const fromCalendar =
-    (location.state as { from?: string } | null)?.from === "/calendar";
 
   useEffect(() => {
     let cancelled = false;
@@ -49,7 +47,7 @@ export function NoticeDetailPage() {
   return (
     <main className="page">
       <article className="card card-wide card-read">
-        {loading ? <p className="muted">불러오는 중...</p> : null}
+        {loading ? <Loading /> : null}
         {error ? <p className="error">{error}</p> : null}
 
         {notice ? (
@@ -64,23 +62,16 @@ export function NoticeDetailPage() {
               </time>
             </header>
 
-            {notice.event_start ? (
-              <section className="event-box" aria-label="일정 정보">
-                <strong>일정 안내</strong>
-                <p>
-                  시작: {formatDateTime(notice.event_start)}
-                  <br />
-                  {notice.event_end
-                    ? `종료: ${formatDateTime(notice.event_end)}`
-                    : null}
-                  {notice.location ? (
-                    <>
-                      <br />
-                      장소: {notice.location}
-                    </>
-                  ) : null}
-                </p>
-              </section>
+            {notice.image_url ? (
+              <a
+                className="notice-image"
+                href={notice.image_url}
+                target="_blank"
+                rel="noreferrer"
+                title="원본 이미지 보기"
+              >
+                <img src={notice.image_url} alt={`${notice.title} 첨부 이미지`} />
+              </a>
             ) : null}
 
             <div className="notice-content">{notice.content}</div>
@@ -88,9 +79,7 @@ export function NoticeDetailPage() {
         ) : null}
 
         <p className="switch-link">
-          <Link to={fromCalendar ? "/calendar" : "/notices"}>
-            {fromCalendar ? "캘린더로 돌아가기" : "목록으로 돌아가기"}
-          </Link>
+          <Link to="/notices">목록으로 돌아가기</Link>
         </p>
       </article>
     </main>

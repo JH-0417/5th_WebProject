@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { createFaq, deleteFaq } from "../api/admin";
 import { fetchFaqs } from "../api/faqs";
 import type { Faq } from "../types/faqs";
+import { Loading } from "../components/Loading";
 
 /** 관리자 FAQ 등록·삭제 페이지 */
 export function AdminFaqsPage() {
@@ -126,7 +127,7 @@ export function AdminFaqsPage() {
         {message ? (
           <p className="success admin-faq-feedback">{message}</p>
         ) : null}
-        {loading ? <p className="muted">불러오는 중...</p> : null}
+        {loading ? <Loading /> : null}
         {!loading && faqs.length === 0 ? (
           <p className="muted">등록된 FAQ가 없습니다.</p>
         ) : null}

@@ -34,6 +34,7 @@ export type SignupRequest = {
   email: string;
   apply_reason: string; // 지원 사유
   desired_activity: string; // 해보고 싶은 활동
+  privacy_agreed: boolean; // 개인정보 수집·이용 동의 (true 여야 가입 가능)
 };
 
 /** POST /auth/signup 성공 응답 */

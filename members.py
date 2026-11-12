@@ -17,12 +17,19 @@ from sqlalchemy.orm import Session
 
 from sqlalchemy.exc import IntegrityError
 
-from crud import get_member_by_public_id, get_members, update_member, update_member_password
+from crud import (
+    get_member_by_public_id,
+    get_members,
+    update_member,
+    update_member_password,
+    withdraw_member,
+)
 from database import get_db
 from pagination import PageParams, page_params
 from dependencies import get_current_member
 from models import MemberDB
 from schemas import (
+    AccountDeleteRequest,
     MemberListResponse,
     MemberPublicListResponse,
     MemberPublicResponse,
@@ -157,6 +164,33 @@ def change_my_password(
 
     update_member_password(db, current_member, hash_password(payload.new_password))
     return {"message": "비밀번호가 변경되었습니다."}
+
+
+@router.delete("/me")
+def withdraw_my_account(
+    payload: AccountDeleteRequest,
+    current_member: MemberDB = Depends(get_current_member),
+    db: Session = Depends(get_db),
+):
+    """
+    회원 탈퇴 API.
+
+    - 비밀번호를 다시 확인한 뒤 회원 정보를 즉시 삭제합니다. (개인정보 처리방침: 탈퇴 시 지체 없이 파기)
+    - 최고관리자는 다른 관리자에게 최고관리자를 양도한 뒤에만 탈퇴할 수 있습니다.
+    """
+    if not verify_password(payload.password, current_member.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="비밀번호가 올바르지 않습니다.",
+        )
+    if current_member.is_owner:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="최고관리자는 다른 관리자에게 최고관리자를 양도한 뒤 탈퇴할 수 있습니다.",
+        )
+
+    withdraw_member(db, current_member)
+    return {"message": "회원 탈퇴가 완료되었습니다. 개인정보는 즉시 삭제되었습니다."}
 
 
 @router.get("", response_model=None)

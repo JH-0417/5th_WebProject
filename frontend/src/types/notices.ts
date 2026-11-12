@@ -4,10 +4,9 @@ export type Notice = {
   title: string;
   content: string;
   is_pinned: boolean;
-  event_start: string | null;
-  event_end: string | null;
-  location: string | null;
+  image_url: string | null;
   created_at: string;
+  created_by_name?: string | null;
   updated_at: string;
 };
 
@@ -21,9 +20,6 @@ export type NoticeListResponse = {
 export type NoticeCreateRequest = {
   title: string;
   content: string;
-  event_start: string | null;
-  event_end: string | null;
-  location: string | null;
 };
 
 /** PATCH /admin/notices/{public_id} 요청 */

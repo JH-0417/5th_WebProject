@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from activity_members import project_members_router, study_members_router
 from admin import router as admin_router
 from auth import router as auth_router
 from calendars import router as calendar_router
@@ -58,6 +59,8 @@ app.include_router(auth_router)
 app.include_router(members_router)
 app.include_router(projects_router)
 app.include_router(studies_router)
+app.include_router(project_members_router)
+app.include_router(study_members_router)
 app.include_router(notices_router)
 app.include_router(calendar_router)
 app.include_router(gallery_router)

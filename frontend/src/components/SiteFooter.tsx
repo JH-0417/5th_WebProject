@@ -104,6 +104,10 @@ export function SiteFooter() {
       </div>
 
       <small className="landing-footer-copy">
+        <Link to="/privacy" className="landing-footer-privacy">
+          개인정보 처리방침
+        </Link>
+        <br />
         © 2026 제 5세대. All rights reserved.
         <br />
         Made with ❤ by 5th Generation

@@ -1,8 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { clearAccessToken, fetchMe } from "../api/auth";
+import { withdrawMyAccount } from "../api/members";
 import { RecruitmentToggle } from "../components/RecruitmentToggle";
 import type { MeResponse } from "../types/auth";
+import { Loading } from "../components/Loading";
 
 /**
  * 로그인 후 회원 마이페이지
@@ -18,6 +20,12 @@ export function HomePage() {
   const [me, setMe] = useState<MeResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  // 회원 탈퇴
+  const [withdrawOpen, setWithdrawOpen] = useState(false);
+  const [withdrawPassword, setWithdrawPassword] = useState("");
+  const [withdrawConfirmed, setWithdrawConfirmed] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,13 +63,30 @@ export function HomePage() {
     navigate("/login", { replace: true });
   }
 
+  async function handleWithdraw(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!withdrawConfirmed) return;
+    setWithdrawing(true);
+    setWithdrawError(null);
+    try {
+      const result = await withdrawMyAccount(withdrawPassword);
+      clearAccessToken();
+      window.alert(result.message);
+      navigate("/", { replace: true });
+    } catch (err) {
+      setWithdrawError(err instanceof Error ? err.message : "탈퇴에 실패했습니다.");
+    } finally {
+      setWithdrawing(false);
+    }
+  }
+
   return (
     <main className="page">
       <section className="card card-wide">
         <h1>마이페이지</h1>
         <p className="subtitle">회원 정보와 관리 메뉴를 확인하세요.</p>
 
-        {loading ? <p className="muted">불러오는 중...</p> : null}
+        {loading ? <Loading /> : null}
         {error ? <p className="error">{error}</p> : null}
 
         {me ? (
@@ -132,6 +157,9 @@ export function HomePage() {
               <Link to="/admin/notices" className="btn-primary-link">
                 공지사항 관리
               </Link>
+              <Link to="/admin/calendar" className="btn-primary-link">
+                일정 관리
+              </Link>
               <Link to="/admin/gallery" className="btn-primary-link">
                 갤러리 관리
               </Link>
@@ -150,6 +178,57 @@ export function HomePage() {
             로그아웃
           </button>
         </div>
+
+        {me ? (
+          <section className="withdraw-box" aria-label="회원 탈퇴">
+            <button
+              type="button"
+              className="withdraw-toggle"
+              aria-expanded={withdrawOpen}
+              onClick={() => setWithdrawOpen((open) => !open)}
+            >
+              회원 탈퇴
+            </button>
+            {withdrawOpen ? (
+              <form className="form withdraw-form" onSubmit={handleWithdraw}>
+                <p>
+                  탈퇴하면 회원 정보와 프로젝트·스터디 참여 내역이{" "}
+                  <strong>즉시 삭제되며 복구할 수 없습니다.</strong> 작성한
+                  공지·사진은 동아리 기록으로 남고 작성자 표시만 사라집니다.{" "}
+                  <Link to="/privacy#retention">개인정보 처리방침</Link>
+                </p>
+                <label className="field">
+                  <span>비밀번호 확인</span>
+                  <input
+                    type="password"
+                    value={withdrawPassword}
+                    onChange={(event) => setWithdrawPassword(event.target.value)}
+                    autoComplete="current-password"
+                    required
+                  />
+                </label>
+                <label className="checkbox-field">
+                  <input
+                    type="checkbox"
+                    checked={withdrawConfirmed}
+                    onChange={(event) => setWithdrawConfirmed(event.target.checked)}
+                  />
+                  <span>
+                    <strong>위 내용을 확인했으며 탈퇴합니다.</strong>
+                  </span>
+                </label>
+                {withdrawError ? <p className="error">{withdrawError}</p> : null}
+                <button
+                  type="submit"
+                  className="btn-danger"
+                  disabled={withdrawing || !withdrawConfirmed || !withdrawPassword}
+                >
+                  {withdrawing ? "처리 중..." : "탈퇴하기"}
+                </button>
+              </form>
+            ) : null}
+          </section>
+        ) : null}
       </section>
     </main>
   );
