@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AdminRoute } from "./components/AdminRoute";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { SiteFooter } from "./components/SiteFooter";
 import { SiteHeader } from "./components/SiteHeader";
 import { AdminActivitiesPage } from "./pages/AdminActivitiesPage";
 import { AdminActivityFormPage } from "./pages/AdminActivityFormPage";
@@ -24,6 +25,7 @@ import { NoticeDetailPage } from "./pages/NoticeDetailPage";
 import { NoticesPage } from "./pages/NoticesPage";
 import { ProfileEditPage } from "./pages/ProfileEditPage";
 import { SignupPage } from "./pages/SignupPage";
+import { useScrollReveal } from "./utils/useScrollReveal";
 
 /**
  * 앱 최상위 컴포넌트 + URL 라우팅
@@ -50,6 +52,8 @@ import { SignupPage } from "./pages/SignupPage";
  *   /login, /signup → 인증 페이지
  */
 function App() {
+  useScrollReveal();
+
   return (
     <BrowserRouter>
       <SiteHeader />
@@ -220,6 +224,7 @@ function App() {
         <Route path="/signup" element={<SignupPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      <SiteFooter />
     </BrowserRouter>
   );
 }

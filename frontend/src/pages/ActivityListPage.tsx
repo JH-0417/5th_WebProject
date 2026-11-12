@@ -56,7 +56,7 @@ export function ActivityListPage({ kind }: ActivityListPageProps) {
 
   return (
     <main className="page">
-      <section className="card card-wide">
+      <section className="card card-wide card-full">
         <h1>{label.title}</h1>
         <p className="subtitle">
           동아리에서 운영하는 {label.title}를 확인하세요.

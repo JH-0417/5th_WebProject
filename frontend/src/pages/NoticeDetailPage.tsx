@@ -48,7 +48,7 @@ export function NoticeDetailPage() {
 
   return (
     <main className="page">
-      <article className="card card-wide">
+      <article className="card card-wide card-read">
         {loading ? <p className="muted">불러오는 중...</p> : null}
         {error ? <p className="error">{error}</p> : null}
 

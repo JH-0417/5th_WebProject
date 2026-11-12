@@ -97,7 +97,7 @@ export function CalendarPage() {
 
   return (
     <main className="page">
-      <section className="card card-calendar">
+      <section className="card card-calendar card-full">
         <div className="calendar-header">
           <div>
             <h1>동아리 일정</h1>

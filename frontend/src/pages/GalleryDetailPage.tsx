@@ -46,7 +46,7 @@ export function GalleryDetailPage() {
 
   return (
     <main className="page">
-      <article className="card card-gallery-detail">
+      <article className="card card-gallery-detail card-read">
         {loading ? <p className="muted">불러오는 중...</p> : null}
         {error ? <p className="error">{error}</p> : null}
 

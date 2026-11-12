@@ -55,7 +55,7 @@ export function AboutPage() {
           </div>
         </div>
         <div className="about-hero-brand">
-          <img src="/brand/gen5_main_CI.png" alt="제 5세대 CI" />
+          <img src="/brand/gen5_logo.png" alt="제 5세대 로고" />
         </div>
       </section>
 
